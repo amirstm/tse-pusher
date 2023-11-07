@@ -31,7 +31,12 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
         timedelta = datetime.combine(datetime.today(), wakeup_at) - datetime.now()
         await asyncio.sleep(timedelta)
 
+    async def perform_market_time(self):
+        """Perform the tasks for the market open time"""
+
     async def perform_daily(self):
         """Daily tasks for the crawler are called from here"""
         self._LOGGER.info("Daily tasks are starting.")
         await self.sleep(self.MARKET_START_TIME)
+        self._LOGGER.info("Market is starting.")
+        await self.perform_market_time()
