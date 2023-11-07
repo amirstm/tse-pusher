@@ -7,7 +7,7 @@ setuptools.setup(
     author="Arka Equities & Securities",
     author_email="zare@arkaequities.com",
     description="Pusher for Tehran Stock Exchange data crawled from TSETMC website.",
-    long_description="", # TODO : Add long description
+    long_description="",  # TODO : Add long description
     packages=setuptools.find_packages(),
     install_requires=["httpx", "tse-utils"],
     classifiers=[
@@ -15,5 +15,5 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
-    ]
+    ],
 )
