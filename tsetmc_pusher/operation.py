@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import time, datetime
+from tse_utils import tsetmc
 from tsetmc_pusher.repository import MarketRealtimeData
 
 
@@ -15,6 +16,7 @@ class TsetmcRealtimeCrawlerTiminigs:
 
     MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
     MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
+    CRAWL_SLEEP_SECONDS: float = 0.1
 
 
 class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
@@ -25,6 +27,7 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
     def __init__(self):
         self.market_realtime_date = MarketRealtimeData()
         self.__trade_data_timeout = 500
+        self.__tsetmc_scraper = tsetmc.TsetmcScraper()
 
     @classmethod
     async def sleep(cls, wakeup_at: time):
@@ -37,12 +40,15 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
         self._LOGGER.info(
             "Trade data catch started, timeout : %d", self.__trade_data_timeout
         )
+        market_watch_data = self.__tsetmc_scraper.get_market_watch()
+        print(market_watch_data)
 
     async def __perform_trade_data_loop(self):
         """Perform the tasks for the market open time"""
         while datetime.now().time() < self.MARKET_END_TIME:
             try:
                 await self.__update_trade_data()
+                await asyncio.sleep(TsetmcRealtimeCrawlerTiminigs.CRAWL_SLEEP_SECONDS)
             except Exception as ex:
                 pass
 
