@@ -33,14 +33,14 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
     async def sleep(cls, wakeup_at: time):
         """Sleep until appointed time"""
         timedelta = datetime.combine(datetime.today(), wakeup_at) - datetime.now()
-        await asyncio.sleep(timedelta)
+        await asyncio.sleep(timedelta.total_seconds())
 
     async def __update_trade_data(self):
         """Updates trade data from TSETMC"""
         self._LOGGER.info(
             "Trade data catch started, timeout : %d", self.__trade_data_timeout
         )
-        market_watch_data = self.__tsetmc_scraper.get_market_watch()
+        market_watch_data = await self.__tsetmc_scraper.get_market_watch()
         print(market_watch_data)
 
     async def __perform_trade_data_loop(self):

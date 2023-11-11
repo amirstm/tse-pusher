@@ -1,16 +1,18 @@
 """Manual test for telegram_task library"""
 import os
+import asyncio
 import logging
-from datetime import datetime, time, timedelta
 from logging.handlers import TimedRotatingFileHandler
+from tsetmc_pusher.operation import TsetmcRealtimeCrawler
 
 
-def main():
+async def main():
     """Manually testing the pusher"""
     logger = logging.getLogger("tsetmc_pusher")
     formatter = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s: %(message)s")
     logger.setLevel(logging.INFO)
     log_file_path = "logs/log_"
+    os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
     file_handler = TimedRotatingFileHandler(
         filename=log_file_path, when="midnight", backupCount=30
     )
@@ -24,6 +26,9 @@ def main():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
+    operator = TsetmcRealtimeCrawler()
+    await operator.perform_daily()
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.new_event_loop().run_until_complete(main())
