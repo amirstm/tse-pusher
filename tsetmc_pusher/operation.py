@@ -39,17 +39,18 @@ class TsetmcRealtimeCrawler:
             "Trade data catch started, timeout : %d", self.__trade_data_timeout
         )
         market_watch_data = await self.__tsetmc_scraper.get_market_watch(
-            h_even=self.__max_trade_time_int, ref_id=self.__max_order_row_id
+            # The following line has been removed because of a bug in TSETMC server \
+            # that ignores updates on some instruments, including options
+            # h_even=self.__max_trade_time_int, ref_id=self.__max_order_row_id
         )
         if market_watch_data:
             (
                 self.__max_trade_time_int,
                 self.__max_order_row_id,
             ) = self.next_market_watch_request_ids(market_watch_data)
-            self.__apply_new_market_watch_trade_data(market_watch_data)
-
-    def __apply_new_market_watch_trade_data(self, market_watch_data):
-        """Applys the new market watch trade data to the repository"""
+            self.market_realtime_date.apply_new_market_watch_trade_data(
+                market_watch_data
+            )
 
     @classmethod
     def next_market_watch_request_ids(cls, market_watch_data):
