@@ -16,7 +16,7 @@ class TsetmcRealtimeCrawlerTiminigs:
 
     MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
     MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
-    CRAWL_SLEEP_SECONDS: float = 0.1
+    CRAWL_SLEEP_SECONDS: float = 1
 
 
 class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
@@ -45,21 +45,23 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
         market_watch_data = await self.__tsetmc_scraper.get_market_watch(
             h_even=self.__max_trade_time_int, ref_id=self.__max_order_row_id
         )
-        (
-            self.__max_trade_time_int,
-            self.__max_order_row_id,
-        ) = self.next_market_watch_request_ids(market_watch_data)
-        print(market_watch_data)
+        if market_watch_data:
+            (
+                self.__max_trade_time_int,
+                self.__max_order_row_id,
+            ) = self.next_market_watch_request_ids(market_watch_data)
 
     @classmethod
     def next_market_watch_request_ids(cls, market_watch_data):
         max_order_row_id = max(
-            [y.row_id for y in x.orderbook.rows] for x in market_watch_data
+            max(y.row_id for y in x.orderbook.rows)
+            for x in market_watch_data
+            if x.orderbook
         )
         max_trade_time = max(x.last_trade_time for x in market_watch_data)
         max_trade_time_int = (
             max_trade_time.hour * 10000
-            + max_trade_time.minite * 100
+            + max_trade_time.minute * 100
             + max_trade_time.second
         )
         return max_trade_time_int, max_order_row_id
@@ -71,7 +73,7 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
                 await self.__update_trade_data()
                 await asyncio.sleep(TsetmcRealtimeCrawlerTiminigs.CRAWL_SLEEP_SECONDS)
             except Exception as ex:
-                pass
+                self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
 
     async def perform_daily(self):
         """Daily tasks for the crawler are called from here"""
