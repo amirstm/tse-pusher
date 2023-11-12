@@ -4,7 +4,7 @@ This module contains the classes needed for keeping realtime market data
 import threading
 from datetime import datetime
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
-from tse_utils.models.realtime import OrderBookRow
+from tse_utils.models.realtime import OrderBookRow, ClientType
 from tse_utils.tsetmc import MarketWatchTradeData, MarketWatchClientTypeData
 
 
@@ -18,10 +18,37 @@ class MarketRealtimeData:
     def apply_new_client_type(
         self, client_type: list[MarketWatchClientTypeData]
     ) -> None:
-        """Applys the new client type to the repository"""
+        """Applies the new client type to the repository"""
+        with self.__instruments_lock:
+            for mwi in client_type:
+                instrument = next(
+                    (
+                        x
+                        for x in self.__instruments
+                        if x.identification.tsetmc_code == mwi.tsetmc_code
+                    ),
+                    None,
+                )
+                if instrument and instrument.client_type != mwi:
+                    self.update_instrument_client_type(
+                        instrument.client_type, mwi.client_type
+                    )
+
+    def update_instrument_client_type(
+        self, instrument_ct: ClientType, mwi_ct: ClientType
+    ):
+        """Update an instrument's client type data"""
+        instrument_ct.legal.buy.num = mwi_ct.legal.buy.num
+        instrument_ct.legal.buy.volume = mwi_ct.legal.buy.volume
+        instrument_ct.legal.sell.num = mwi_ct.legal.sell.num
+        instrument_ct.legal.sell.volume = mwi_ct.legal.sell.volume
+        instrument_ct.natural.buy.num = mwi_ct.natural.buy.num
+        instrument_ct.natural.buy.volume = mwi_ct.natural.buy.volume
+        instrument_ct.natural.sell.num = mwi_ct.natural.sell.num
+        instrument_ct.natural.sell.volume = mwi_ct.natural.sell.volume
 
     def apply_new_trade_data(self, trade_data: list[MarketWatchTradeData]) -> None:
-        """Applys the new trade data to the repository"""
+        """Applies the new trade data to the repository"""
         with self.__instruments_lock:
             for mwi in trade_data:
                 instrument = next(
@@ -53,7 +80,6 @@ class MarketRealtimeData:
                         self.update_instrument_orderbook_row(
                             instrument.orderbook.rows[rn], row
                         )
-                        print(f"Update row {rn} for {instrument}")
 
     def update_instrument_orderbook_row(
         self, instrument_obr: OrderBookRow, mwi_obr: OrderBookRow
