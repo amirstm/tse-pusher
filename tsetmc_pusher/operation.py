@@ -4,22 +4,18 @@ This module contains the operational classes in this project
 
 import asyncio
 import logging
-from dataclasses import dataclass
 from datetime import time, datetime
+import httpx
 from tse_utils import tsetmc
 from tsetmc_pusher.repository import MarketRealtimeData
 
 
-@dataclass
-class TsetmcRealtimeCrawlerTiminigs:
-    """Holds timing params for operations"""
-
-    MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
-    MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
-    CRAWL_SLEEP_SECONDS: float = 1
+MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
+MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
+CRAWL_SLEEP_SECONDS: float = 1
 
 
-class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
+class TsetmcRealtimeCrawler:
     """This module is responsible for continuously crawling TSETMC"""
 
     _LOGGER = logging.getLogger(__name__)
@@ -50,9 +46,14 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
                 self.__max_trade_time_int,
                 self.__max_order_row_id,
             ) = self.next_market_watch_request_ids(market_watch_data)
+            self.__apply_new_market_watch_trade_data(market_watch_data)
+
+    def __apply_new_market_watch_trade_data(self, market_watch_data):
+        """Applys the new market watch trade data to the repository"""
 
     @classmethod
     def next_market_watch_request_ids(cls, market_watch_data):
+        """Extracts the maximum trade time and orderbook row id"""
         max_order_row_id = max(
             max(y.row_id for y in x.orderbook.rows)
             for x in market_watch_data
@@ -68,16 +69,16 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
 
     async def __perform_trade_data_loop(self):
         """Perform the tasks for the market open time"""
-        while datetime.now().time() < self.MARKET_END_TIME:
+        while datetime.now().time() < MARKET_END_TIME:
             try:
                 await self.__update_trade_data()
-                await asyncio.sleep(TsetmcRealtimeCrawlerTiminigs.CRAWL_SLEEP_SECONDS)
-            except Exception as ex:
+                await asyncio.sleep(CRAWL_SLEEP_SECONDS)
+            except (ValueError, httpx.TimeoutException, httpx.NetworkError) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
 
     async def perform_daily(self):
         """Daily tasks for the crawler are called from here"""
         self._LOGGER.info("Daily tasks are starting.")
-        await self.sleep(self.MARKET_START_TIME)
+        await self.sleep(MARKET_START_TIME)
         self._LOGGER.info("Market is starting.")
         await self.__perform_trade_data_loop()
