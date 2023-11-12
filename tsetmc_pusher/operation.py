@@ -25,9 +25,11 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
     _LOGGER = logging.getLogger(__name__)
 
     def __init__(self):
-        self.market_realtime_date = MarketRealtimeData()
-        self.__trade_data_timeout = 500
+        self.market_realtime_date: MarketRealtimeData = MarketRealtimeData()
+        self.__trade_data_timeout: int = 500
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
+        self.__max_trade_time_int: int = 0
+        self.__max_order_row_id: int = 0
 
     @classmethod
     async def sleep(cls, wakeup_at: time):
@@ -40,8 +42,27 @@ class TsetmcRealtimeCrawler(TsetmcRealtimeCrawlerTiminigs):
         self._LOGGER.info(
             "Trade data catch started, timeout : %d", self.__trade_data_timeout
         )
-        market_watch_data = await self.__tsetmc_scraper.get_market_watch()
+        market_watch_data = await self.__tsetmc_scraper.get_market_watch(
+            h_even=self.__max_trade_time_int, ref_id=self.__max_order_row_id
+        )
+        (
+            self.__max_trade_time_int,
+            self.__max_order_row_id,
+        ) = self.next_market_watch_request_ids(market_watch_data)
         print(market_watch_data)
+
+    @classmethod
+    def next_market_watch_request_ids(cls, market_watch_data):
+        max_order_row_id = max(
+            [y.row_id for y in x.orderbook.rows] for x in market_watch_data
+        )
+        max_trade_time = max(x.last_trade_time for x in market_watch_data)
+        max_trade_time_int = (
+            max_trade_time.hour * 10000
+            + max_trade_time.minite * 100
+            + max_trade_time.second
+        )
+        return max_trade_time_int, max_order_row_id
 
     async def __perform_trade_data_loop(self):
         """Perform the tasks for the market open time"""
