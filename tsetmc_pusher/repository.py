@@ -5,7 +5,7 @@ import threading
 from datetime import datetime
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
 from tse_utils.models.realtime import OrderBookRow
-from tse_utils.tsetmc import MarketWatchTradeData
+from tse_utils.tsetmc import MarketWatchTradeData, MarketWatchClientTypeData
 
 
 class MarketRealtimeData:
@@ -15,12 +15,15 @@ class MarketRealtimeData:
         self.__instruments: list[Instrument] = []
         self.__instruments_lock: threading.Lock = threading.Lock()
 
-    def apply_new_market_watch_trade_data(
-        self, market_watch_data: list[MarketWatchTradeData]
+    def apply_new_client_type(
+        self, client_type: list[MarketWatchClientTypeData]
     ) -> None:
-        """Applys the new market watch trade data to the repository"""
+        """Applys the new client type to the repository"""
+
+    def apply_new_trade_data(self, trade_data: list[MarketWatchTradeData]) -> None:
+        """Applys the new trade data to the repository"""
         with self.__instruments_lock:
-            for mwi in market_watch_data:
+            for mwi in trade_data:
                 instrument = next(
                     (
                         x
