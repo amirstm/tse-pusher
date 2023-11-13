@@ -25,8 +25,6 @@ class TsetmcRealtimeCrawler:
         self.__trade_data_timeout: int = 500
         self.__client_type_timeout: int = 500
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
-        self.__max_trade_time_int: int = 0
-        self.__max_order_row_id: int = 0
 
     @classmethod
     async def sleep(cls, wakeup_at: time) -> None:
@@ -46,10 +44,6 @@ class TsetmcRealtimeCrawler:
             timeout=self.__trade_data_timeout
         )
         if trade_data:
-            (
-                self.__max_trade_time_int,
-                self.__max_order_row_id,
-            ) = self.next_market_watch_request_ids(trade_data)
             self.market_realtime_date.apply_new_trade_data(trade_data)
 
     @classmethod
@@ -81,9 +75,6 @@ class TsetmcRealtimeCrawler:
             "Client type catch started, timeout : %d", self.__client_type_timeout
         )
         client_type = await self.__tsetmc_scraper.get_client_type_all(
-            # The following line has been removed because of a bug in TSETMC server \
-            # that ignores updates on some instruments, including options
-            # h_even=self.__max_trade_time_int, ref_id=self.__max_order_row_id
             timeout=self.__client_type_timeout
         )
         if client_type:
@@ -98,15 +89,16 @@ class TsetmcRealtimeCrawler:
             except (ValueError, httpx.TimeoutException, httpx.NetworkError) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
 
+    async def market_time_operations(self) -> None:
+        """Groups the different market time operations"""
+        group = asyncio.gather(
+            self.__perform_trade_data_loop(), self.__perform_client_type_loop()
+        )
+        await asyncio.wait_for(group, timeout=None)
+
     async def perform_daily(self) -> None:
         """Daily tasks for the crawler are called from here"""
         self._LOGGER.info("Daily tasks are starting.")
         await self.sleep(MARKET_START_TIME)
         self._LOGGER.info("Market is starting.")
         await self.market_time_operations()
-
-    async def market_time_operations(self):
-        group = asyncio.gather(
-            self.__perform_trade_data_loop(), self.__perform_client_type_loop()
-        )
-        await asyncio.wait_for(group, timeout=None)

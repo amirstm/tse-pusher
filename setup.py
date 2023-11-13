@@ -9,7 +9,7 @@ setuptools.setup(
     description="Pusher for Tehran Stock Exchange data crawled from TSETMC website.",
     long_description="",  # TODO : Add long description
     packages=setuptools.find_packages(),
-    install_requires=["httpx", "tse-utils"],
+    install_requires=["httpx", "websockets", "tse-utils"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux",
