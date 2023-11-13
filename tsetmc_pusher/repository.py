@@ -30,9 +30,7 @@ class MarketRealtimeData:
                     None,
                 )
                 if instrument and instrument.client_type != mwi:
-                    self.update_instrument_client_type(
-                        instrument.client_type, mwi.client_type
-                    )
+                    self.update_instrument_client_type(instrument.client_type, mwi)
 
     def update_instrument_client_type(
         self, instrument_ct: ClientType, mwi_ct: ClientType

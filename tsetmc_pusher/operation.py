@@ -103,6 +103,10 @@ class TsetmcRealtimeCrawler:
         self._LOGGER.info("Daily tasks are starting.")
         await self.sleep(MARKET_START_TIME)
         self._LOGGER.info("Market is starting.")
-        await self.__perform_trade_data_loop()
-        await self.__perform_client_type_loop()
-        # Later synchronize the upper two lines
+        await self.market_time_operations()
+
+    async def market_time_operations(self):
+        group = asyncio.gather(
+            self.__perform_trade_data_loop(), self.__perform_client_type_loop()
+        )
+        await asyncio.wait_for(group, timeout=None)
