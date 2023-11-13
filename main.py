@@ -3,7 +3,7 @@ import os
 import asyncio
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from tsetmc_pusher.operation import TsetmcRealtimeCrawler
+from tsetmc_pusher.operation import TsetmcOperator
 
 
 async def main():
@@ -26,7 +26,7 @@ async def main():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
-    operator = TsetmcRealtimeCrawler()
+    operator = TsetmcOperator()
     await operator.perform_daily()
 
 

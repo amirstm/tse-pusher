@@ -8,20 +8,21 @@ from datetime import time, datetime
 import httpx
 from tse_utils import tsetmc
 from tsetmc_pusher.repository import MarketRealtimeData
-
+from tsetmc_pusher.websocket import TsetmcWebsocket
 
 MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
 MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
 CRAWL_SLEEP_SECONDS: float = 1
 
 
-class TsetmcRealtimeCrawler:
+class TsetmcOperator:
     """This module is responsible for continuously crawling TSETMC"""
 
     _LOGGER = logging.getLogger(__name__)
 
     def __init__(self):
         self.market_realtime_date: MarketRealtimeData = MarketRealtimeData()
+        self.websocket = TsetmcWebsocket(self.market_realtime_date)
         self.__trade_data_timeout: int = 500
         self.__client_type_timeout: int = 500
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
@@ -92,7 +93,9 @@ class TsetmcRealtimeCrawler:
     async def market_time_operations(self) -> None:
         """Groups the different market time operations"""
         group = asyncio.gather(
-            self.__perform_trade_data_loop(), self.__perform_client_type_loop()
+            self.__perform_trade_data_loop(),
+            self.__perform_client_type_loop(),
+            self.websocket.start(),
         )
         await asyncio.wait_for(group, timeout=None)
 
