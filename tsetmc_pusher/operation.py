@@ -4,16 +4,17 @@ This module contains the operational classes in this project
 
 import asyncio
 import logging
-from datetime import time, datetime
-import httpx
+from datetime import datetime
 from tse_utils import tsetmc
 from tse_utils.tsetmc.models import TsetmcScrapeException
 from tsetmc_pusher.repository import MarketRealtimeData
 from tsetmc_pusher.websocket import TsetmcWebsocket
-
-MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
-MARKET_END_TIME: time = time(hour=15, minute=0, second=0)
-CRAWL_SLEEP_SECONDS: float = 1
+from tsetmc_pusher.timing import (
+    sleep_until,
+    MARKET_END_TIME,
+    MARKET_START_TIME,
+    CRAWL_SLEEP_SECONDS,
+)
 
 
 class TsetmcOperator:
@@ -27,12 +28,6 @@ class TsetmcOperator:
         self.__trade_data_timeout: int = 500
         self.__client_type_timeout: int = 500
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
-
-    @classmethod
-    async def sleep(cls, wakeup_at: time) -> None:
-        """Sleep until appointed time"""
-        timedelta = datetime.combine(datetime.today(), wakeup_at) - datetime.now()
-        await asyncio.sleep(timedelta.total_seconds())
 
     async def __update_trade_data(self) -> None:
         """Updates trade data from TSETMC"""
@@ -96,13 +91,13 @@ class TsetmcOperator:
         group = asyncio.gather(
             self.__perform_trade_data_loop(),
             self.__perform_client_type_loop(),
-            self.websocket.serve(),
+            self.websocket.serve_websocket(),
         )
         await asyncio.wait_for(group, timeout=None)
 
     async def perform_daily(self) -> None:
         """Daily tasks for the crawler are called from here"""
         self._LOGGER.info("Daily tasks are starting.")
-        await self.sleep(MARKET_START_TIME)
+        await sleep_until(MARKET_START_TIME)
         self._LOGGER.info("Market is starting.")
         await self.market_time_operations()

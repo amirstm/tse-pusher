@@ -1,11 +1,11 @@
 """
 This module contains the websocket for TSETMC
 """
-import asyncio
 from websockets.server import serve
 from websockets.sync.client import ClientConnection
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from tsetmc_pusher.repository import MarketRealtimeData
+from tsetmc_pusher.timing import sleep_until, MARKET_END_TIME
 
 
 class TsetmcWebsocket:
@@ -25,7 +25,7 @@ class TsetmcWebsocket:
         except (ConnectionClosedError, ConnectionClosedOK):
             print(f"Connection closed to {websocket.id}")
 
-    async def serve(self):
+    async def serve_websocket(self):
         """Serves the websocket for the project"""
         async with serve(self.handle_connection, "localhost", 8765):
-            await asyncio.Future()
+            await sleep_until(MARKET_END_TIME)
