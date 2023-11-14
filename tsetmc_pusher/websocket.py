@@ -112,7 +112,25 @@ def instrument_data_trade(instrument: Instrument) -> list:
     ]
 
 
-def instrument_data_orderbook(instrument: Instrument) -> list:
+def instrument_data_orderbook_specific_rows(
+    instrument: Instrument, rows: list[int] = None
+) -> list:
+    """Convert instrument's orderbook data for websocket transfer"""
+    return [
+        [
+            x.demand.num,
+            x.demand.price,
+            x.demand.volume,
+            x.supply.num,
+            x.supply.price,
+            x.supply.volume,
+        ]
+        for rn, x in enumerate(instrument.orderbook.rows)
+        if rn in rows
+    ]
+
+
+def instrument_data_orderbook(instrument: Instrument, rows: list[int] = None) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
     return [
         [
@@ -173,7 +191,8 @@ class TsetmcWebsocket:
     def set_market_realtime_data_pushers(self) -> None:
         """Sets the pusher methods for market realtime data"""
         self.market_realtime_data.pusher_trade_data = self.pusher_trade_data
-        # self.market_realtime_data.pusher_orderbook_data = self.pusher_orderbook_data
+        self.market_realtime_data.pusher_orderbook_data = self.pusher_orderbook_data
+        self.market_realtime_data.pusher_clienttype_data = self.pusher_clienttype_data
 
     async def pusher_trade_data(
         self, instruments: list[Instrument]
@@ -195,31 +214,56 @@ class TsetmcWebsocket:
                         json.dumps({channel.isin: instrument_data_trade(instrument)}),
                     )
 
-    # def pusher_orderbook_data(
-    #     self, instruments: list[Instrument]
-    # ) -> Callable[[list[tuple[Instrument, list[int]]]], Awaitable[None]]:
-    #     """Returns the pusher_trade_data to override in repo"""
-    #     for instrument, rows in instruments:
-    #         with self.__channels_lock:
-    #             channel = next(
-    #                 (
-    #                     x
-    #                     for x in self.__channels
-    #                     if x.isin == instrument.identification.isin
-    #                 ),
-    #                 None,
-    #             )
-    #             if channel and channel.orderbook_subscribers:
-    #                 websockets.broadcast(
-    #                     channel.orderbook_subscribers,
-    #                     json.dumps(
-    #                         {channel.isin: instrument_data_orderbook(instrument)}
-    #                     ),  # TODO just rows
-    #                 )
+    async def pusher_orderbook_data(
+        self, instruments: list[Instrument]
+    ) -> Callable[[list[tuple[Instrument, list[int]]]], Awaitable[None]]:
+        """Returns the pusher_orderbook_data to override in repo"""
+        for instrument, rows in instruments:
+            with self.__channels_lock:
+                channel = next(
+                    (
+                        x
+                        for x in self.__channels
+                        if x.isin == instrument.identification.isin
+                    ),
+                    None,
+                )
+                if channel and channel.orderbook_subscribers:
+                    await self.broadcast(
+                        channel.orderbook_subscribers,
+                        json.dumps(
+                            {
+                                channel.isin: instrument_data_orderbook_specific_rows(
+                                    instrument, rows
+                                )
+                            }
+                        ),
+                    )
+
+    async def pusher_clienttype_data(
+        self, instruments: list[Instrument]
+    ) -> Callable[[list[Instrument]], Awaitable[None]]:
+        """Returns the pusher_clienttype_data to override in repo"""
+        for instrument in instruments:
+            with self.__channels_lock:
+                channel = next(
+                    (
+                        x
+                        for x in self.__channels
+                        if x.isin == instrument.identification.isin
+                    ),
+                    None,
+                )
+                if channel and channel.clienttype_subscribers:
+                    await self.broadcast(
+                        channel.clienttype_subscribers,
+                        json.dumps(
+                            {channel.isin: instrument_data_clienttype(instrument)}
+                        ),
+                    )
 
     async def broadcast(cls, clients: list[ClientConnection], message: str):
         """Broadcast a message to a bunch of users"""
-        await asyncio.sleep(3)
         group = asyncio.gather(*[client.send(message) for client in clients])
         await asyncio.wait_for(group, timeout=None)
 

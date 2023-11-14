@@ -39,7 +39,11 @@ class MarketRealtimeData:
                 )
                 if instrument and instrument.client_type != mwi:
                     self.update_instrument_client_type(instrument.client_type, mwi)
-        self.pusher_clienttype_data(updated_clienttype_instruments)
+        threading.Thread(
+            target=asyncio.run,
+            args=(self.pusher_clienttype_data(updated_clienttype_instruments),),
+            daemon=True,
+        ).start()
 
     def update_instrument_client_type(
         self, instrument_ct: ClientType, mwi_ct: ClientType
@@ -78,27 +82,32 @@ class MarketRealtimeData:
                         )
                     )
                     self.__instruments.append(instrument)
-                if instrument.identification.isin == "IRO1FOLD0001" or not (
+                if not (
                     instrument.intraday_trade_candle.last_trade_datetime
                     and instrument.intraday_trade_candle.last_trade_datetime.time()
                     == mwi.last_trade_time
-                ):  # TODO: Delete exception
+                ):
                     self.update_instrument_trade_data(instrument, mwi)
                     updated_trade_instruments.append(instrument)
+                updated_rows = []
                 for rn, row in enumerate(mwi.orderbook.rows):
-                    updated_rows = []
                     if row != instrument.orderbook.rows[rn]:
                         self.update_instrument_orderbook_row(
                             instrument.orderbook.rows[rn], row
                         )
                         updated_rows.append(rn)
-                    if updated_rows:
-                        updated_orderbook_instruments.append((instrument, updated_rows))
-        print(updated_trade_instruments[0])
-        asyncio.get_event_loop().create_task(
-            self.pusher_trade_data(updated_trade_instruments)
-        )
-        self.pusher_orderbook_data(updated_orderbook_instruments)
+                if updated_rows:
+                    updated_orderbook_instruments.append((instrument, updated_rows))
+        threading.Thread(
+            target=asyncio.run,
+            args=(self.pusher_trade_data(updated_trade_instruments),),
+            daemon=True,
+        ).start()
+        threading.Thread(
+            target=asyncio.run,
+            args=(self.pusher_orderbook_data(updated_orderbook_instruments),),
+            daemon=True,
+        ).start()
 
     def update_instrument_orderbook_row(
         self, instrument_obr: OrderBookRow, mwi_obr: OrderBookRow
