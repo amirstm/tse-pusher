@@ -3,16 +3,15 @@ from websockets.client import connect
 
 
 async def async_input(websocket):
-    while True:
-        ym = input("Your message: ")
-        await websocket.send(ym)
-        await asyncio.sleep(1)
+    ym = input("Your message: ")
+    await websocket.send(ym)
+    await asyncio.sleep(1)
 
 
 async def async_recv(websocket):
     while True:
         message = await websocket.recv()
-        print(f"Received: {message} | From: {websocket.id}")
+        print(f"Received: {message}")
 
 
 async def main():

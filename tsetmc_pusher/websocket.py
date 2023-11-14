@@ -32,28 +32,33 @@ class InstrumentChannel:
 
 
 def subscribe_trade(client: ClientConnection, instrument_channel: InstrumentChannel):
+    """Subscribe to instrument's trade data"""
     instrument_channel.trade_subscribers.add(client)
 
 
 def subscribe_orderbook(
     client: ClientConnection, instrument_channel: InstrumentChannel
 ):
+    """Subscribe to instrument's orderbook data"""
     instrument_channel.orderbook_subscribers.add(client)
 
 
 def subscribe_clienttype(
     client: ClientConnection, instrument_channel: InstrumentChannel
 ):
+    """Subscribe to instrument's clienttype data"""
     instrument_channel.clienttype_subscribers.add(client)
 
 
 def subscribe_all(client: ClientConnection, instrument_channel: InstrumentChannel):
+    """Subscribe to all instrument's data"""
     subscribe_trade(client, instrument_channel)
     subscribe_orderbook(client, instrument_channel)
     subscribe_clienttype(client, instrument_channel)
 
 
 def unsubscribe_trade(client: ClientConnection, instrument_channel: InstrumentChannel):
+    """Unsubscribe from instrument's trade data"""
     try:
         instrument_channel.trade_subscribers.remove(client)
     except KeyError:
@@ -63,6 +68,7 @@ def unsubscribe_trade(client: ClientConnection, instrument_channel: InstrumentCh
 def unsubscribe_orderbook(
     client: ClientConnection, instrument_channel: InstrumentChannel
 ):
+    """Unsubscribe from instrument's orderbook data"""
     try:
         instrument_channel.orderbook_subscribers.remove(client)
     except KeyError:
@@ -72,6 +78,7 @@ def unsubscribe_orderbook(
 def unsubscribe_clienttype(
     client: ClientConnection, instrument_channel: InstrumentChannel
 ):
+    """Unsubscribe from instrument's clienttype data"""
     try:
         instrument_channel.clienttype_subscribers.remove(client)
     except KeyError:
@@ -79,14 +86,17 @@ def unsubscribe_clienttype(
 
 
 def unsubscribe_all(client: ClientConnection, instrument_channel: InstrumentChannel):
+    """Unsubscribe from all instrument's data"""
     unsubscribe_trade(client, instrument_channel)
     unsubscribe_orderbook(client, instrument_channel)
     unsubscribe_clienttype(client, instrument_channel)
 
 
 def instrument_data_trade(instrument: Instrument) -> list:
+    """Convert instrument's trade data for websocket transfer"""
     ltd = instrument.intraday_trade_candle.last_trade_datetime
-    ltd_display = f"{ltd.year}/{ltd.month:02}/{ltd.day:02} {ltd.hour:02}:{ltd.minute:02}:{ltd.second:02}"
+    ltd_display = f"{ltd.year}/{ltd.month:02}/{ltd.day:02} \
+{ltd.hour:02}:{ltd.minute:02}:{ltd.second:02}"
     return [
         instrument.intraday_trade_candle.close_price,
         instrument.intraday_trade_candle.last_price,
@@ -102,10 +112,22 @@ def instrument_data_trade(instrument: Instrument) -> list:
 
 
 def instrument_data_orderbook(instrument: Instrument) -> list:
-    return []  # TODO
+    """Convert instrument's orderbook data for websocket transfer"""
+    return [
+        [
+            x.demand.num,
+            x.demand.price,
+            x.demand.volume,
+            x.supply.num,
+            x.supply.price,
+            x.supply.volume,
+        ]
+        for x in instrument.orderbook.rows
+    ]
 
 
 def instrument_data_clienttype(instrument: Instrument) -> list[int]:
+    """Convert instrument's clienttype data for websocket transfer"""
     return [
         instrument.client_type.legal.buy.num,
         instrument.client_type.legal.buy.volume,
@@ -118,8 +140,18 @@ def instrument_data_clienttype(instrument: Instrument) -> list[int]:
     ]
 
 
+def instrument_data_thresholds(instrument: Instrument) -> list[int]:
+    """Convert instrument's price thresholds data for websocket transfer"""
+    return [
+        instrument.order_limitations.max_price,
+        instrument.order_limitations.min_price,
+    ]
+
+
 def instrument_data_all(instrument: Instrument) -> dict[str, list]:
+    """Convert all instrument's data for websocket transfer"""
     return {
+        "thresholds": instrument_data_thresholds(instrument),
         "trade": instrument_data_trade(instrument),
         "orderbook": instrument_data_orderbook(instrument),
         "clienttype": instrument_data_clienttype(instrument),
@@ -135,6 +167,11 @@ class TsetmcWebsocket:
         self.market_realtime_data: MarketRealtimeData = market_realtime_data
         self.__channels: list[InstrumentChannel] = []
         self.__channels_lock = Lock()
+        self.set_market_realtime_data_pushers()
+
+    def set_market_realtime_data_pushers(self) -> None:
+        """Sets the pusher methods for market realtime data"""
+        pass  # TODO
 
     async def handle_connection(self, client: ClientConnection) -> None:
         """Handles the clients' connections"""
@@ -169,18 +206,18 @@ class TsetmcWebsocket:
         message_parts = message.split(".")
         if len(message_parts) != 3:
             self._LOGGER.error("Message [%s] has unacceptable format.", message)
-            return
+            return None
         if message_parts[0] not in acceptable_actions:
             self._LOGGER.error("Action [%s] is not acceptable.", message_parts[0])
-            return
+            return None
         if message_parts[1] not in acceptable_channels:
             self._LOGGER.error("Channel [%s] is not acceptable.", message_parts[1])
-            return
+            return None
         isins = message_parts[2].split(",")
         fake_isin = next((x for x in isins if len(x) != 12), None)
         if fake_isin:
             self._LOGGER.error("Isin [%s] is not acceptable.", fake_isin)
-            return
+            return None
         instruments = self.market_realtime_data.get_instruments(isins)
         channel_action_func = self.get_channel_action_func(
             message_parts[0], message_parts[1]
@@ -190,17 +227,15 @@ class TsetmcWebsocket:
         )
         initial_data = {}
         with self.__channels_lock:
-            for counter in range(len(isins)):
+            for counter, isin in enumerate(isins):
                 channel = next((x for x in self.__channels), None)
                 if not channel:
-                    channel = InstrumentChannel(isins[counter])
+                    channel = InstrumentChannel(isin)
                     self.__channels.append(channel)
-                    self._LOGGER.info("New channel for [%s]", isins[counter])
+                    self._LOGGER.info("New channel for [%s]", isin)
                 channel_action_func(client, channel)
                 if instruments[counter]:
-                    initial_data[isins[counter]] = initial_data_func(
-                        instruments[counter]
-                    )
+                    initial_data[isin] = initial_data_func(instruments[counter])
         return initial_data
 
     def get_channel_action_func(

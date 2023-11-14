@@ -2,6 +2,7 @@
 This module contains the classes needed for keeping realtime market data 
 """
 import threading
+from typing import Callable, Awaitable
 from datetime import datetime
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
 from tse_utils.models.realtime import OrderBookRow, ClientType
@@ -14,11 +15,21 @@ class MarketRealtimeData:
     def __init__(self):
         self.__instruments: list[Instrument] = []
         self.__instruments_lock: threading.Lock = threading.Lock()
+        self.pusher_trade_data: Callable[
+            [list[Instrument]], Awaitable[None]
+        ] = lambda x: None
+        self.pusher_orderbook_data: Callable[
+            [list[Instrument]], Awaitable[None]
+        ] = lambda x: None
+        self.pusher_clienttype_data: Callable[
+            [list[Instrument]], Awaitable[None]
+        ] = lambda x: None
 
-    def apply_new_client_type(
+    async def apply_new_client_type(
         self, client_type: list[MarketWatchClientTypeData]
     ) -> None:
         """Applies the new client type to the repository"""
+        updated_clienttype_instruments = []
         with self.__instruments_lock:
             for mwi in client_type:
                 instrument = next(
@@ -31,6 +42,7 @@ class MarketRealtimeData:
                 )
                 if instrument and instrument.client_type != mwi:
                     self.update_instrument_client_type(instrument.client_type, mwi)
+        await self.pusher_clienttype_data(updated_clienttype_instruments)
 
     def update_instrument_client_type(
         self, instrument_ct: ClientType, mwi_ct: ClientType
@@ -45,8 +57,12 @@ class MarketRealtimeData:
         instrument_ct.natural.sell.num = mwi_ct.natural.sell.num
         instrument_ct.natural.sell.volume = mwi_ct.natural.sell.volume
 
-    def apply_new_trade_data(self, trade_data: list[MarketWatchTradeData]) -> None:
+    async def apply_new_trade_data(
+        self, trade_data: list[MarketWatchTradeData]
+    ) -> None:
         """Applies the new trade data to the repository"""
+        updated_trade_instruments = []
+        updated_orderbook_instruments = []
         with self.__instruments_lock:
             for mwi in trade_data:
                 instrument = next(
@@ -73,11 +89,18 @@ class MarketRealtimeData:
                     == mwi.last_trade_time
                 ):
                     self.update_instrument_trade_data(instrument, mwi)
+                    updated_trade_instruments.append(instrument)
                 for rn, row in enumerate(mwi.orderbook.rows):
+                    updated_rows = []
                     if row != instrument.orderbook.rows[rn]:
                         self.update_instrument_orderbook_row(
                             instrument.orderbook.rows[rn], row
                         )
+                        updated_rows.append(rn)
+                    if updated_rows:
+                        updated_orderbook_instruments.append((instrument, updated_rows))
+        await self.pusher_trade_data(updated_trade_instruments)
+        await self.pusher_orderbook_data(updated_orderbook_instruments)
 
     def update_instrument_orderbook_row(
         self, instrument_obr: OrderBookRow, mwi_obr: OrderBookRow
