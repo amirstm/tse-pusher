@@ -41,7 +41,7 @@ class TsetmcOperator:
             timeout=self.__trade_data_timeout
         )
         if trade_data:
-            await self.market_realtime_date.apply_new_trade_data(trade_data)
+            self.market_realtime_date.apply_new_trade_data(trade_data)
 
     @classmethod
     def next_market_watch_request_ids(cls, trade_data) -> tuple[int, int]:
@@ -75,7 +75,7 @@ class TsetmcOperator:
             timeout=self.__client_type_timeout
         )
         if client_type:
-            await self.market_realtime_date.apply_new_client_type(client_type)
+            self.market_realtime_date.apply_new_client_type(client_type)
 
     async def __perform_client_type_loop(self) -> None:
         """Perform the client type tasks for the market open time"""

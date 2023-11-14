@@ -1,10 +1,11 @@
 """
 This module contains the websocket for TSETMC
 """
+import asyncio
 import json
 from dataclasses import dataclass
 import logging
-from typing import Callable
+from typing import Callable, Awaitable
 from threading import Lock
 import websockets
 from websockets.server import serve
@@ -171,7 +172,56 @@ class TsetmcWebsocket:
 
     def set_market_realtime_data_pushers(self) -> None:
         """Sets the pusher methods for market realtime data"""
-        pass  # TODO
+        self.market_realtime_data.pusher_trade_data = self.pusher_trade_data
+        # self.market_realtime_data.pusher_orderbook_data = self.pusher_orderbook_data
+
+    async def pusher_trade_data(
+        self, instruments: list[Instrument]
+    ) -> Callable[[list[Instrument]], Awaitable[None]]:
+        """Returns the pusher_trade_data to override in repo"""
+        for instrument in instruments:
+            with self.__channels_lock:
+                channel = next(
+                    (
+                        x
+                        for x in self.__channels
+                        if x.isin == instrument.identification.isin
+                    ),
+                    None,
+                )
+                if channel and channel.trade_subscribers:
+                    await self.broadcast(
+                        channel.trade_subscribers,
+                        json.dumps({channel.isin: instrument_data_trade(instrument)}),
+                    )
+
+    # def pusher_orderbook_data(
+    #     self, instruments: list[Instrument]
+    # ) -> Callable[[list[tuple[Instrument, list[int]]]], Awaitable[None]]:
+    #     """Returns the pusher_trade_data to override in repo"""
+    #     for instrument, rows in instruments:
+    #         with self.__channels_lock:
+    #             channel = next(
+    #                 (
+    #                     x
+    #                     for x in self.__channels
+    #                     if x.isin == instrument.identification.isin
+    #                 ),
+    #                 None,
+    #             )
+    #             if channel and channel.orderbook_subscribers:
+    #                 websockets.broadcast(
+    #                     channel.orderbook_subscribers,
+    #                     json.dumps(
+    #                         {channel.isin: instrument_data_orderbook(instrument)}
+    #                     ),  # TODO just rows
+    #                 )
+
+    async def broadcast(cls, clients: list[ClientConnection], message: str):
+        """Broadcast a message to a bunch of users"""
+        await asyncio.sleep(3)
+        group = asyncio.gather(*[client.send(message) for client in clients])
+        await asyncio.wait_for(group, timeout=None)
 
     async def handle_connection(self, client: ClientConnection) -> None:
         """Handles the clients' connections"""

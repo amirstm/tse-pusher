@@ -1,8 +1,9 @@
 """
 This module contains the classes needed for keeping realtime market data 
 """
+import asyncio
 import threading
-from typing import Callable, Awaitable
+from typing import Callable
 from datetime import datetime
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
 from tse_utils.models.realtime import OrderBookRow, ClientType
@@ -15,17 +16,13 @@ class MarketRealtimeData:
     def __init__(self):
         self.__instruments: list[Instrument] = []
         self.__instruments_lock: threading.Lock = threading.Lock()
-        self.pusher_trade_data: Callable[
-            [list[Instrument]], Awaitable[None]
-        ] = lambda x: None
+        self.pusher_trade_data: Callable[[list[Instrument]], None] = lambda x: None
         self.pusher_orderbook_data: Callable[
-            [list[Instrument]], Awaitable[None]
+            [list[tuple[Instrument, list[int]]]], None
         ] = lambda x: None
-        self.pusher_clienttype_data: Callable[
-            [list[Instrument]], Awaitable[None]
-        ] = lambda x: None
+        self.pusher_clienttype_data: Callable[[list[Instrument]], None] = lambda x: None
 
-    async def apply_new_client_type(
+    def apply_new_client_type(
         self, client_type: list[MarketWatchClientTypeData]
     ) -> None:
         """Applies the new client type to the repository"""
@@ -42,7 +39,7 @@ class MarketRealtimeData:
                 )
                 if instrument and instrument.client_type != mwi:
                     self.update_instrument_client_type(instrument.client_type, mwi)
-        await self.pusher_clienttype_data(updated_clienttype_instruments)
+        self.pusher_clienttype_data(updated_clienttype_instruments)
 
     def update_instrument_client_type(
         self, instrument_ct: ClientType, mwi_ct: ClientType
@@ -57,9 +54,7 @@ class MarketRealtimeData:
         instrument_ct.natural.sell.num = mwi_ct.natural.sell.num
         instrument_ct.natural.sell.volume = mwi_ct.natural.sell.volume
 
-    async def apply_new_trade_data(
-        self, trade_data: list[MarketWatchTradeData]
-    ) -> None:
+    def apply_new_trade_data(self, trade_data: list[MarketWatchTradeData]) -> None:
         """Applies the new trade data to the repository"""
         updated_trade_instruments = []
         updated_orderbook_instruments = []
@@ -83,11 +78,11 @@ class MarketRealtimeData:
                         )
                     )
                     self.__instruments.append(instrument)
-                if not (
+                if instrument.identification.isin == "IRO1FOLD0001" or not (
                     instrument.intraday_trade_candle.last_trade_datetime
                     and instrument.intraday_trade_candle.last_trade_datetime.time()
                     == mwi.last_trade_time
-                ):
+                ):  # TODO: Delete exception
                     self.update_instrument_trade_data(instrument, mwi)
                     updated_trade_instruments.append(instrument)
                 for rn, row in enumerate(mwi.orderbook.rows):
@@ -99,8 +94,11 @@ class MarketRealtimeData:
                         updated_rows.append(rn)
                     if updated_rows:
                         updated_orderbook_instruments.append((instrument, updated_rows))
-        await self.pusher_trade_data(updated_trade_instruments)
-        await self.pusher_orderbook_data(updated_orderbook_instruments)
+        print(updated_trade_instruments[0])
+        asyncio.get_event_loop().create_task(
+            self.pusher_trade_data(updated_trade_instruments)
+        )
+        self.pusher_orderbook_data(updated_orderbook_instruments)
 
     def update_instrument_orderbook_row(
         self, instrument_obr: OrderBookRow, mwi_obr: OrderBookRow
