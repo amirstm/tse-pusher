@@ -17,7 +17,6 @@ async def async_recv(websocket):
 
 async def main():
     async with connect("ws://localhost:8765") as websocket:
-        print(type(websocket))
         group = asyncio.gather(async_input(websocket), async_recv(websocket))
         await group
 
