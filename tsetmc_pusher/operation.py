@@ -7,6 +7,7 @@ import logging
 from datetime import time, datetime
 import httpx
 from tse_utils import tsetmc
+from tse_utils.tsetmc.models import TsetmcScrapeException
 from tsetmc_pusher.repository import MarketRealtimeData
 from tsetmc_pusher.websocket import TsetmcWebsocket
 
@@ -67,7 +68,7 @@ class TsetmcOperator:
             try:
                 await self.__update_trade_data()
                 await asyncio.sleep(CRAWL_SLEEP_SECONDS)
-            except (ValueError, httpx.TimeoutException, httpx.NetworkError) as ex:
+            except (ValueError, TsetmcScrapeException) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
 
     async def __update_client_type(self) -> None:
@@ -87,7 +88,7 @@ class TsetmcOperator:
             try:
                 await self.__update_client_type()
                 await asyncio.sleep(CRAWL_SLEEP_SECONDS)
-            except (ValueError, httpx.TimeoutException, httpx.NetworkError) as ex:
+            except (ValueError, TsetmcScrapeException) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
 
     async def market_time_operations(self) -> None:
@@ -95,7 +96,7 @@ class TsetmcOperator:
         group = asyncio.gather(
             self.__perform_trade_data_loop(),
             self.__perform_client_type_loop(),
-            self.websocket.start(),
+            self.websocket.serve(),
         )
         await asyncio.wait_for(group, timeout=None)
 
