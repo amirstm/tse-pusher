@@ -1,6 +1,7 @@
 """
 This module contains the websocket for TSETMC
 """
+import json
 from dataclasses import dataclass
 import logging
 from typing import Callable
@@ -9,6 +10,7 @@ import websockets
 from websockets.server import serve
 from websockets.sync.client import ClientConnection
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
+from tse_utils.models.instrument import Instrument
 from tsetmc_pusher.repository import MarketRealtimeData
 from tsetmc_pusher.timing import sleep_until, MARKET_END_TIME
 
@@ -82,6 +84,48 @@ def unsubscribe_all(client: ClientConnection, instrument_channel: InstrumentChan
     unsubscribe_clienttype(client, instrument_channel)
 
 
+def instrument_data_trade(instrument: Instrument) -> list:
+    ltd = instrument.intraday_trade_candle.last_trade_datetime
+    ltd_display = f"{ltd.year}/{ltd.month:02}/{ltd.day:02} {ltd.hour:02}:{ltd.minute:02}:{ltd.second:02}"
+    return [
+        instrument.intraday_trade_candle.close_price,
+        instrument.intraday_trade_candle.last_price,
+        ltd_display,
+        instrument.intraday_trade_candle.max_price,
+        instrument.intraday_trade_candle.min_price,
+        instrument.intraday_trade_candle.open_price,
+        instrument.intraday_trade_candle.previous_price,
+        instrument.intraday_trade_candle.trade_num,
+        instrument.intraday_trade_candle.trade_value,
+        instrument.intraday_trade_candle.trade_volume,
+    ]
+
+
+def instrument_data_orderbook(instrument: Instrument) -> list:
+    return []  # TODO
+
+
+def instrument_data_clienttype(instrument: Instrument) -> list[int]:
+    return [
+        instrument.client_type.legal.buy.num,
+        instrument.client_type.legal.buy.volume,
+        instrument.client_type.legal.sell.num,
+        instrument.client_type.legal.sell.volume,
+        instrument.client_type.natural.buy.num,
+        instrument.client_type.natural.buy.volume,
+        instrument.client_type.natural.sell.num,
+        instrument.client_type.natural.sell.volume,
+    ]
+
+
+def instrument_data_all(instrument: Instrument) -> dict[str, list]:
+    return {
+        "trade": instrument_data_trade(instrument),
+        "orderbook": instrument_data_orderbook(instrument),
+        "clienttype": instrument_data_clienttype(instrument),
+    }
+
+
 class TsetmcWebsocket:
     """Holds the websocket for TSETMC"""
 
@@ -100,7 +144,9 @@ class TsetmcWebsocket:
                 self._LOGGER.info(
                     "Receieved message [%s] from [%s]", message, client.id
                 )
-                self.handle_connection_message(client, message)
+                response = self.handle_connection_message(client, message)
+                if response:
+                    await client.send(json.dumps(response))
         except (ConnectionClosedError, ConnectionClosedOK):
             self._LOGGER.info("Connection closed to [%s]", client.id)
         finally:
@@ -112,7 +158,7 @@ class TsetmcWebsocket:
             for channel in self.__channels:
                 unsubscribe_all(client, channel)
 
-    def handle_connection_message(self, client: ClientConnection, message: str) -> None:
+    def handle_connection_message(self, client: ClientConnection, message: str) -> dict:
         """
         Handles a single message from client
         Standard message format is: <Action>.<Channel>.<Isin1>,<Isin2>,...
@@ -135,21 +181,32 @@ class TsetmcWebsocket:
         if fake_isin:
             self._LOGGER.error("Isin [%s] is not acceptable.", fake_isin)
             return
+        instruments = self.market_realtime_data.get_instruments(isins)
         channel_action_func = self.get_channel_action_func(
             message_parts[0], message_parts[1]
         )
+        initial_data_func = self.get_initial_data_func(
+            message_parts[0], message_parts[1]
+        )
+        initial_data = {}
         with self.__channels_lock:
-            for isin in isins:
+            for counter in range(len(isins)):
                 channel = next((x for x in self.__channels), None)
                 if not channel:
-                    channel = InstrumentChannel(isin)
+                    channel = InstrumentChannel(isins[counter])
                     self.__channels.append(channel)
+                    self._LOGGER.info("New channel for [%s]", isins[counter])
                 channel_action_func(client, channel)
+                if instruments[counter]:
+                    initial_data[isins[counter]] = initial_data_func(
+                        instruments[counter]
+                    )
+        return initial_data
 
     def get_channel_action_func(
         self, action: str, channel: str
     ) -> Callable[[ClientConnection, InstrumentChannel], None]:
-        """Returns the function for handling the actions"""
+        """Returns the function for handling the subscriptions"""
         return_values = {
             "1": {
                 "all": subscribe_all,
@@ -162,6 +219,26 @@ class TsetmcWebsocket:
                 "trade": unsubscribe_trade,
                 "orderbook": unsubscribe_orderbook,
                 "clienttype": unsubscribe_clienttype,
+            },
+        }
+        return return_values[action][channel]
+
+    def get_initial_data_func(
+        self, action: str, channel: str
+    ) -> Callable[[Instrument], None]:
+        """Returns the method for getting the initial data after subscription"""
+        return_values = {
+            "1": {
+                "all": instrument_data_all,
+                "trade": instrument_data_trade,
+                "orderbook": instrument_data_orderbook,
+                "clienttype": instrument_data_clienttype,
+            },
+            "0": {
+                "all": lambda x: None,
+                "trade": lambda x: None,
+                "orderbook": lambda x: None,
+                "clienttype": lambda x: None,
             },
         }
         return return_values[action][channel]

@@ -94,6 +94,8 @@ class MarketRealtimeData:
         self, instrument: Instrument, mwi: MarketWatchTradeData
     ) -> None:
         """Updates trade data for a single instrument"""
+        instrument.order_limitations.max_price = mwi.price_thresholds.max_price
+        instrument.order_limitations.min_price = mwi.price_thresholds.min_price
         instrument.intraday_trade_candle.previous_price = (
             mwi.intraday_trade_candle.previous_price
         )
@@ -118,3 +120,14 @@ class MarketRealtimeData:
         instrument.intraday_trade_candle.last_trade_datetime = datetime.combine(
             datetime.today(), mwi.last_trade_time
         )
+
+    def get_instruments(self, isins: list[str]) -> list[Instrument]:
+        """Returns instruments matching with a list of isins"""
+        with self.__instruments_lock:
+            instruments = [
+                next(
+                    (x for x in self.__instruments if x.identification.isin == y), None
+                )
+                for y in isins
+            ]
+        return instruments
