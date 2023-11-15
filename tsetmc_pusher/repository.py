@@ -165,3 +165,9 @@ class MarketRealtimeData:
                 for y in isins
             ]
         return instruments
+
+    def get_all_instruments(self) -> list[Instrument]:
+        """Returns all instruments"""
+        with self.__instruments_lock:
+            instruments = [x for x in self.__instruments]
+        return instruments

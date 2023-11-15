@@ -323,12 +323,16 @@ class TsetmcWebsocket:
         if message_parts[1] not in acceptable_channels:
             self._LOGGER.error("Channel [%s] is not acceptable.", message_parts[1])
             return None
-        isins = message_parts[2].split(",")
-        fake_isin = next((x for x in isins if len(x) != 12), None)
-        if fake_isin:
-            self._LOGGER.error("Isin [%s] is not acceptable.", fake_isin)
-            return None
-        instruments = self.market_realtime_data.get_instruments(isins)
+        if message_parts[2] == "*":
+            instruments = self.market_realtime_data.get_all_instruments()
+            isins = [x.identification.isin for x in instruments]
+        else:
+            isins = message_parts[2].split(",")
+            fake_isin = next((x for x in isins if len(x) != 12), None)
+            if fake_isin:
+                self._LOGGER.error("Isin [%s] is not acceptable.", fake_isin)
+                return None
+            instruments = self.market_realtime_data.get_instruments(isins)
         channel_action_func = self.get_channel_action_func(
             message_parts[0], message_parts[1]
         )
