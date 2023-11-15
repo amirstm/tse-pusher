@@ -3,7 +3,7 @@ This module contains the classes needed for keeping realtime market data
 """
 import asyncio
 import threading
-from typing import Callable
+from typing import Callable, Awaitable
 from datetime import datetime
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
 from tse_utils.models.realtime import OrderBookRow, ClientType
@@ -16,11 +16,15 @@ class MarketRealtimeData:
     def __init__(self):
         self.__instruments: list[Instrument] = []
         self.__instruments_lock: threading.Lock = threading.Lock()
-        self.pusher_trade_data: Callable[[list[Instrument]], None] = lambda x: None
+        self.pusher_trade_data: Callable[
+            [list[Instrument]], Awaitable[None]
+        ] = lambda x: asyncio.sleep(0)
         self.pusher_orderbook_data: Callable[
-            [list[tuple[Instrument, list[int]]]], None
-        ] = lambda x: None
-        self.pusher_clienttype_data: Callable[[list[Instrument]], None] = lambda x: None
+            [list[tuple[Instrument, list[int]]]], Awaitable[None]
+        ] = lambda x: asyncio.sleep(0)
+        self.pusher_clienttype_data: Callable[
+            [list[Instrument]], Awaitable[None]
+        ] = lambda x: asyncio.sleep(0)
 
     def apply_new_client_type(
         self, client_type: list[MarketWatchClientTypeData]

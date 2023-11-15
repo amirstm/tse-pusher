@@ -31,6 +31,9 @@ class InstrumentChannel:
         self.orderbook_subscribers = set()
         self.clienttype_subscribers = set()
 
+    def __repr__(self) -> str:
+        return f"{self.isin}: {[x.id for x in self.orderbook_subscribers]}"
+
 
 def subscribe_trade(client: ClientConnection, instrument_channel: InstrumentChannel):
     """Subscribe to instrument's trade data"""
@@ -293,6 +296,7 @@ class TsetmcWebsocket:
         except (ConnectionClosedError, ConnectionClosedOK):
             self._LOGGER.info("Connection closed to [%s]", client.id)
         finally:
+            self._LOGGER.info("Removing [%s] from all channels", client.id)
             self.remove_from_channels(client)
 
     def remove_from_channels(self, client: ClientConnection) -> None:
@@ -334,7 +338,7 @@ class TsetmcWebsocket:
         initial_data = {}
         with self.__channels_lock:
             for counter, isin in enumerate(isins):
-                channel = next((x for x in self.__channels), None)
+                channel = next((x for x in self.__channels if x.isin == isin), None)
                 if not channel:
                     channel = InstrumentChannel(isin)
                     self.__channels.append(channel)
