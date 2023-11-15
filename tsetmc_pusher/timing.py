@@ -4,7 +4,7 @@ from datetime import time, datetime
 
 
 MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
-MARKET_END_TIME: time = time(hour=19, minute=0, second=0)  # TODO : fix
+MARKET_END_TIME: time = time(hour=15, minute=0, second=0)  # TODO : fix
 CRAWL_SLEEP_SECONDS: float = 1
 
 

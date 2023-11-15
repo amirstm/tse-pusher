@@ -98,83 +98,95 @@ def instrument_data_trade(instrument: Instrument) -> list:
     ltd = instrument.intraday_trade_candle.last_trade_datetime
     ltd_display = f"{ltd.year}/{ltd.month:02}/{ltd.day:02} \
 {ltd.hour:02}:{ltd.minute:02}:{ltd.second:02}"
-    return [
-        instrument.intraday_trade_candle.close_price,
-        instrument.intraday_trade_candle.last_price,
-        ltd_display,
-        instrument.intraday_trade_candle.max_price,
-        instrument.intraday_trade_candle.min_price,
-        instrument.intraday_trade_candle.open_price,
-        instrument.intraday_trade_candle.previous_price,
-        instrument.intraday_trade_candle.trade_num,
-        instrument.intraday_trade_candle.trade_value,
-        instrument.intraday_trade_candle.trade_volume,
-    ]
+    return {
+        "trade": [
+            instrument.intraday_trade_candle.close_price,
+            instrument.intraday_trade_candle.last_price,
+            ltd_display,
+            instrument.intraday_trade_candle.max_price,
+            instrument.intraday_trade_candle.min_price,
+            instrument.intraday_trade_candle.open_price,
+            instrument.intraday_trade_candle.previous_price,
+            instrument.intraday_trade_candle.trade_num,
+            instrument.intraday_trade_candle.trade_value,
+            instrument.intraday_trade_candle.trade_volume,
+        ]
+    }
 
 
 def instrument_data_orderbook_specific_rows(
     instrument: Instrument, rows: list[int] = None
 ) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
-    return [
-        [
-            x.demand.num,
-            x.demand.price,
-            x.demand.volume,
-            x.supply.num,
-            x.supply.price,
-            x.supply.volume,
+    return {
+        "orderbook": [
+            [
+                rn,
+                x.demand.num,
+                x.demand.price,
+                x.demand.volume,
+                x.supply.num,
+                x.supply.price,
+                x.supply.volume,
+            ]
+            for rn, x in enumerate(instrument.orderbook.rows)
+            if rn in rows
         ]
-        for rn, x in enumerate(instrument.orderbook.rows)
-        if rn in rows
-    ]
+    }
 
 
 def instrument_data_orderbook(instrument: Instrument, rows: list[int] = None) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
-    return [
-        [
-            x.demand.num,
-            x.demand.price,
-            x.demand.volume,
-            x.supply.num,
-            x.supply.price,
-            x.supply.volume,
+    return {
+        "orderbook": [
+            [
+                rn,
+                x.demand.num,
+                x.demand.price,
+                x.demand.volume,
+                x.supply.num,
+                x.supply.price,
+                x.supply.volume,
+            ]
+            for rn, x in enumerate(instrument.orderbook.rows)
         ]
-        for x in instrument.orderbook.rows
-    ]
+    }
 
 
 def instrument_data_clienttype(instrument: Instrument) -> list[int]:
     """Convert instrument's clienttype data for websocket transfer"""
-    return [
-        instrument.client_type.legal.buy.num,
-        instrument.client_type.legal.buy.volume,
-        instrument.client_type.legal.sell.num,
-        instrument.client_type.legal.sell.volume,
-        instrument.client_type.natural.buy.num,
-        instrument.client_type.natural.buy.volume,
-        instrument.client_type.natural.sell.num,
-        instrument.client_type.natural.sell.volume,
-    ]
+    return {
+        "clienttype": [
+            instrument.client_type.legal.buy.num,
+            instrument.client_type.legal.buy.volume,
+            instrument.client_type.legal.sell.num,
+            instrument.client_type.legal.sell.volume,
+            instrument.client_type.natural.buy.num,
+            instrument.client_type.natural.buy.volume,
+            instrument.client_type.natural.sell.num,
+            instrument.client_type.natural.sell.volume,
+        ]
+    }
 
 
 def instrument_data_thresholds(instrument: Instrument) -> list[int]:
     """Convert instrument's price thresholds data for websocket transfer"""
-    return [
-        instrument.order_limitations.max_price,
-        instrument.order_limitations.min_price,
-    ]
+    return {
+        "thresholds": [
+            instrument.order_limitations.max_price,
+            instrument.order_limitations.min_price,
+        ]
+    }
 
 
 def instrument_data_all(instrument: Instrument) -> dict[str, list]:
     """Convert all instrument's data for websocket transfer"""
-    return {
-        "thresholds": instrument_data_thresholds(instrument),
-        "trade": instrument_data_trade(instrument),
-        "orderbook": instrument_data_orderbook(instrument),
-        "clienttype": instrument_data_clienttype(instrument),
-    }
+    return (
+        instrument_data_thresholds(instrument)
+        | instrument_data_trade(instrument)
+        | instrument_data_orderbook(instrument)
+        | instrument_data_clienttype(instrument)
+    )
 
 
 class TsetmcWebsocket:
