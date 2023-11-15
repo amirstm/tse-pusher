@@ -14,6 +14,12 @@ from tsetmc_pusher.timing import (
     MARKET_END_TIME,
     MARKET_START_TIME,
     CRAWL_SLEEP_SECONDS,
+    TRADE_DATA_TIMEOUT_MAX,
+    TRADE_DATA_TIMEOUT_MIN,
+    TRADE_DATA_TIMEOUT_STEP,
+    CLIENT_TYPE_TIMEOUT_MAX,
+    CLIENT_TYPE_TIMEOUT_MIN,
+    CLIENT_TYPE_TIMEOUT_STEP,
 )
 
 
@@ -25,8 +31,8 @@ class TsetmcOperator:
     def __init__(self):
         self.market_realtime_date: MarketRealtimeData = MarketRealtimeData()
         self.websocket = TsetmcWebsocket(self.market_realtime_date)
-        self.__trade_data_timeout: int = 500
-        self.__client_type_timeout: int = 500
+        self.__trade_data_timeout: int = TRADE_DATA_TIMEOUT_MIN
+        self.__client_type_timeout: int = CLIENT_TYPE_TIMEOUT_MIN
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
 
     async def __update_trade_data(self) -> None:
@@ -63,8 +69,16 @@ class TsetmcOperator:
             try:
                 await self.__update_trade_data()
                 await asyncio.sleep(CRAWL_SLEEP_SECONDS)
+                self.__trade_data_timeout = max(
+                    TRADE_DATA_TIMEOUT_MIN,
+                    self.__trade_data_timeout - TRADE_DATA_TIMEOUT_STEP,
+                )
             except (ValueError, TsetmcScrapeException) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
+                self.__trade_data_timeout = min(
+                    TRADE_DATA_TIMEOUT_MAX,
+                    self.__trade_data_timeout + TRADE_DATA_TIMEOUT_STEP,
+                )
 
     async def __update_client_type(self) -> None:
         """Updates client type from TSETMC"""
@@ -83,8 +97,16 @@ class TsetmcOperator:
             try:
                 await self.__update_client_type()
                 await asyncio.sleep(CRAWL_SLEEP_SECONDS)
+                self.__client_type_timeout = max(
+                    CLIENT_TYPE_TIMEOUT_MIN,
+                    self.__client_type_timeout - CLIENT_TYPE_TIMEOUT_STEP,
+                )
             except (ValueError, TsetmcScrapeException) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
+                self.__client_type_timeout = min(
+                    CLIENT_TYPE_TIMEOUT_MAX,
+                    self.__client_type_timeout + CLIENT_TYPE_TIMEOUT_STEP,
+                )
 
     async def market_time_operations(self) -> None:
         """Groups the different market time operations"""

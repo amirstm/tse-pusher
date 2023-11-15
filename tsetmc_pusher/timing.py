@@ -6,6 +6,12 @@ from datetime import time, datetime
 MARKET_START_TIME: time = time(hour=8, minute=30, second=0)
 MARKET_END_TIME: time = time(hour=15, minute=0, second=0)  # TODO : fix
 CRAWL_SLEEP_SECONDS: float = 1
+TRADE_DATA_TIMEOUT_MAX = 1500
+TRADE_DATA_TIMEOUT_MIN = 500
+TRADE_DATA_TIMEOUT_STEP = 250
+CLIENT_TYPE_TIMEOUT_MAX = 1500
+CLIENT_TYPE_TIMEOUT_MIN = 500
+CLIENT_TYPE_TIMEOUT_STEP = 250
 
 
 async def sleep_until(wakeup_at: time) -> None:
