@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import logging
 from typing import Callable, Awaitable
 from threading import Lock
-import websockets
 from websockets.server import serve
 from websockets.sync.client import ClientConnection
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
@@ -138,7 +137,7 @@ def instrument_data_orderbook_specific_rows(
     }
 
 
-def instrument_data_orderbook(instrument: Instrument, rows: list[int] = None) -> list:
+def instrument_data_orderbook(instrument: Instrument) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
     return {
         "orderbook": [
@@ -277,6 +276,7 @@ class TsetmcWebsocket:
                         ),
                     )
 
+    @classmethod
     async def broadcast(cls, clients: list[ClientConnection], message: str):
         """Broadcast a message to a bunch of users"""
         group = asyncio.gather(*[client.send(message) for client in clients])
