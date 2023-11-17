@@ -7,7 +7,13 @@ setuptools.setup(
     author="Arka Equities & Securities",
     author_email="zare@arkaequities.com",
     description="Pusher for Tehran Stock Exchange data crawled from TSETMC website.",
-    long_description="",  # TODO : Add long description
+    long_description="""\
+This project uses the websocket technology to build a pusher around the realtime data \
+for Tehran Stock Exchange. Source data is crawled from the TSETMC website on optimized \
+intervals. Users can connect to the websocket server and subscribe to as many instruments \
+as they like. Afterwards, each time data for the subscribed instruments is updated, the \
+changes will be pushed to the clients.
+""",
     packages=setuptools.find_packages(),
     install_requires=["httpx", "websockets", "tse-utils"],
     classifiers=[
