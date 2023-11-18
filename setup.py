@@ -2,7 +2,7 @@
 import setuptools
 
 setuptools.setup(
-    name="tse_utils",
+    name="tsetmc_pusher",
     version="1.0.0",
     author="Arka Equities & Securities",
     author_email="zare@arkaequities.com",
