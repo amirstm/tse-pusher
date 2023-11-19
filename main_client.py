@@ -33,8 +33,8 @@ async def main(*args):
         Instrument(identification=x)
         for x in [
             InstrumentIdentification(isin="IRO1FOLD0001"),
-            InstrumentIdentification(isin="IRO1MSMI0001"),
-            InstrumentIdentification(isin="IRO1IKCO0001"),
+            # InstrumentIdentification(isin="IRO1MSMI0001"),
+            # InstrumentIdentification(isin="IRO1IKCO0001"),
         ]
     ]
     client = TsetmcClient(

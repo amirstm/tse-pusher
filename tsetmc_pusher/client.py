@@ -31,7 +31,7 @@ and subscribe to its realtime data
 
     async def subscribe(self):
         isins = ",".join([x.identification.isin for x in self.subscribed_instruments])
-        await self.websocket.send(f"1.all.{isins}")
+        await self.websocket.send(f"1.clienttype.{isins}")
 
     async def operate(self):
         """Start connecting to the websocket and listening for updates"""

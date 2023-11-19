@@ -43,6 +43,7 @@ class MarketRealtimeData:
                 )
                 if instrument and instrument.client_type != mwi:
                     self.update_instrument_client_type(instrument.client_type, mwi)
+                    updated_clienttype_instruments.append(instrument)
         threading.Thread(
             target=asyncio.run,
             args=(self.pusher_clienttype_data(updated_clienttype_instruments),),
