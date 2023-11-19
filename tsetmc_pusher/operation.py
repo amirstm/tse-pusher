@@ -28,9 +28,13 @@ class TsetmcOperator:
 
     _LOGGER = logging.getLogger(__name__)
 
-    def __init__(self):
+    def __init__(self, websocket_host: str, websocket_port: int):
         self.market_realtime_date: MarketRealtimeData = MarketRealtimeData()
-        self.websocket = TsetmcWebsocket(self.market_realtime_date)
+        self.websocket = TsetmcWebsocket(
+            market_realtime_data=self.market_realtime_date,
+            websocket_host=websocket_host,
+            websocket_port=websocket_port,
+        )
         self.__trade_data_timeout: int = TRADE_DATA_TIMEOUT_MIN
         self.__client_type_timeout: int = CLIENT_TYPE_TIMEOUT_MIN
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()

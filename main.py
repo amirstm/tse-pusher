@@ -3,7 +3,13 @@ import os
 import asyncio
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from dotenv import load_dotenv
 from tsetmc_pusher.operation import TsetmcOperator
+
+load_dotenv()
+
+WEBSOCKET_HOST = os.getenv("WEBSOCKET_HOST")
+WEBSOCKET_PORT = os.getenv("WEBSOCKET_PORT")
 
 
 async def main():
@@ -26,7 +32,9 @@ async def main():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
-    operator = TsetmcOperator()
+    operator = TsetmcOperator(
+        websocket_host=WEBSOCKET_HOST, websocket_port=WEBSOCKET_PORT
+    )
     await operator.perform_daily()
 
 

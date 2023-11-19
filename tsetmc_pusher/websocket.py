@@ -196,8 +196,15 @@ class TsetmcWebsocket:
 
     _LOGGER = logging.getLogger(__name__)
 
-    def __init__(self, market_realtime_data: MarketRealtimeData):
+    def __init__(
+        self,
+        market_realtime_data: MarketRealtimeData,
+        websocket_host: str,
+        websocket_port: int,
+    ):
         self.market_realtime_data: MarketRealtimeData = market_realtime_data
+        self.websocket_host: str = websocket_host
+        self.websocket_port: int = websocket_port
         self.__channels: list[InstrumentChannel] = []
         self.__channels_lock = Lock()
         self.set_market_realtime_data_pushers()
@@ -395,6 +402,8 @@ class TsetmcWebsocket:
     async def serve_websocket(self):
         """Serves the websocket for the project"""
         self._LOGGER.info("Serving has started.")
-        async with serve(self.handle_connection, "localhost", 8765):
+        async with serve(
+            self.handle_connection, self.websocket_host, self.websocket_port
+        ):
             await sleep_until(MARKET_END_TIME)
         self._LOGGER.info("Serving has ended.")
