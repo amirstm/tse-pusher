@@ -4,7 +4,7 @@ import asyncio
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
-from tsetmc_pusher.operation import TsetmcOperator
+from tsetmc_pusher.server.operation import TsetmcOperator
 
 load_dotenv()
 
