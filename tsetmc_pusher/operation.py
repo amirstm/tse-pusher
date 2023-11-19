@@ -36,14 +36,14 @@ class TsetmcOperator:
             websocket_host=websocket_host,
             websocket_port=websocket_port,
         )
-        self.__trade_data_timeout: int = TRADE_DATA_TIMEOUT_MIN
-        self.__client_type_timeout: int = CLIENT_TYPE_TIMEOUT_MIN
+        self.__trade_data_timeout: float = TRADE_DATA_TIMEOUT_MIN
+        self.__client_type_timeout: float = CLIENT_TYPE_TIMEOUT_MIN
         self.__tsetmc_scraper = tsetmc.TsetmcScraper()
 
     async def __update_trade_data(self) -> None:
         """Updates trade data from TSETMC"""
         self._LOGGER.info(
-            "Trade data catch started, timeout : %d", self.__trade_data_timeout
+            "Trade data catch started, timeout: %.2f", self.__trade_data_timeout
         )
         trade_data = await self.__tsetmc_scraper.get_market_watch(
             # The following line has been removed because of a bug in TSETMC server \
@@ -84,6 +84,7 @@ class TsetmcOperator:
                 httpx.RemoteProtocolError,
                 httpx.ReadError,
                 httpx.ConnectError,
+                httpx.ReadTimeout,
             ) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
                 self.__trade_data_timeout = min(
@@ -94,7 +95,7 @@ class TsetmcOperator:
     async def __update_client_type(self) -> None:
         """Updates client type from TSETMC"""
         self._LOGGER.info(
-            "Client type catch started, timeout : %d", self.__client_type_timeout
+            "Client type catch started, timeout: %.2f", self.__client_type_timeout
         )
         client_type = await self.__tsetmc_scraper.get_client_type_all(
             timeout=self.__client_type_timeout
@@ -118,6 +119,7 @@ class TsetmcOperator:
                 httpx.RemoteProtocolError,
                 httpx.ReadError,
                 httpx.ConnectError,
+                httpx.ReadTimeout,
             ) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
                 self.__client_type_timeout = min(
