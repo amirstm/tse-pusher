@@ -5,6 +5,7 @@ This module contains the operational classes in this project
 import asyncio
 import logging
 from datetime import datetime
+import httpx
 from tse_utils import tsetmc
 from tse_utils.tsetmc.models import TsetmcScrapeException
 from tsetmc_pusher.repository import MarketRealtimeData
@@ -77,7 +78,13 @@ class TsetmcOperator:
                     TRADE_DATA_TIMEOUT_MIN,
                     self.__trade_data_timeout - TRADE_DATA_TIMEOUT_STEP,
                 )
-            except (ValueError, TsetmcScrapeException) as ex:
+            except (
+                ValueError,
+                TsetmcScrapeException,
+                httpx.RemoteProtocolError,
+                httpx.ReadError,
+                httpx.ConnectError,
+            ) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
                 self.__trade_data_timeout = min(
                     TRADE_DATA_TIMEOUT_MAX,
@@ -105,7 +112,13 @@ class TsetmcOperator:
                     CLIENT_TYPE_TIMEOUT_MIN,
                     self.__client_type_timeout - CLIENT_TYPE_TIMEOUT_STEP,
                 )
-            except (ValueError, TsetmcScrapeException) as ex:
+            except (
+                ValueError,
+                TsetmcScrapeException,
+                httpx.RemoteProtocolError,
+                httpx.ReadError,
+                httpx.ConnectError,
+            ) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
                 self.__client_type_timeout = min(
                     CLIENT_TYPE_TIMEOUT_MAX,
