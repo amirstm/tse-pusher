@@ -75,6 +75,17 @@ and subscribe to its realtime data
         instrument.intraday_trade_candle.trade_value = int(data[8])
         instrument.intraday_trade_candle.trade_volume = int(data[9])
 
+    def __message_orderbook(self, instrument: Instrument, data: list) -> None:
+        """Handles an orderbook update message"""
+        for row in data:
+            rn = int(row[0])
+            instrument.orderbook.rows[rn].demand.num = int(row[1])
+            instrument.orderbook.rows[rn].demand.price = int(row[2])
+            instrument.orderbook.rows[rn].demand.volume = int(row[3])
+            instrument.orderbook.rows[rn].supply.num = int(row[4])
+            instrument.orderbook.rows[rn].supply.price = int(row[5])
+            instrument.orderbook.rows[rn].supply.volume = int(row[6])
+
     async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
         self._LOGGER.info(

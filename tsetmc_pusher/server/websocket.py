@@ -115,7 +115,7 @@ def instrument_data_trade(instrument: Instrument) -> list:
 
 
 def instrument_data_orderbook_specific_rows(
-    instrument: Instrument, rows: list[int] = None
+    instrument: Instrument, rows: list[int]
 ) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
     return {
