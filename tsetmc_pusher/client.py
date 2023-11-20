@@ -51,7 +51,7 @@ and subscribe to its realtime data
                     case "orderbook":
                         self.__message_orderbook(instrument, data)
                     case "clienttype":
-                        pass
+                        self.__message_clienttype(instrument, data)
                     case _:
                         self._LOGGER.fatal("Unknown message channel: %s", channel)
 
@@ -85,6 +85,17 @@ and subscribe to its realtime data
             instrument.orderbook.rows[rn].supply.num = int(row[4])
             instrument.orderbook.rows[rn].supply.price = int(row[5])
             instrument.orderbook.rows[rn].supply.volume = int(row[6])
+
+    def __message_clienttype(self, instrument: Instrument, data: list) -> None:
+        """Handles an orderbook update message"""
+        instrument.client_type.legal.buy.num = int(data[0])
+        instrument.client_type.legal.buy.volume = int(data[1])
+        instrument.client_type.legal.sell.num = int(data[2])
+        instrument.client_type.legal.sell.volume = int(data[3])
+        instrument.client_type.natural.buy.num = int(data[4])
+        instrument.client_type.natural.buy.volume = int(data[5])
+        instrument.client_type.natural.sell.num = int(data[6])
+        instrument.client_type.natural.sell.volume = int(data[7])
 
     async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
