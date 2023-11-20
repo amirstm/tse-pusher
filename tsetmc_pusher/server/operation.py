@@ -85,6 +85,7 @@ class TsetmcOperator:
                 httpx.ReadError,
                 httpx.ConnectError,
                 httpx.ReadTimeout,
+                httpx.ConnectTimeout,
             ) as ex:
                 self._LOGGER.error("Exception on catching trade data: %s", repr(ex))
                 self.__trade_data_timeout = min(
@@ -120,6 +121,7 @@ class TsetmcOperator:
                 httpx.ReadError,
                 httpx.ConnectError,
                 httpx.ReadTimeout,
+                httpx.ConnectTimeout,
             ) as ex:
                 self._LOGGER.error("Exception on catching client type: %s", repr(ex))
                 self.__client_type_timeout = min(
