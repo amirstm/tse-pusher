@@ -98,13 +98,11 @@ def unsubscribe_all(client: ClientConnection, instrument_channel: InstrumentChan
 def instrument_data_trade(instrument: Instrument) -> list:
     """Convert instrument's trade data for websocket transfer"""
     ltd = instrument.intraday_trade_candle.last_trade_datetime
-    ltd_display = f"{ltd.year}/{ltd.month:02}/{ltd.day:02} \
-{ltd.hour:02}:{ltd.minute:02}:{ltd.second:02}"
     return {
         "trade": [
             instrument.intraday_trade_candle.close_price,
             instrument.intraday_trade_candle.last_price,
-            ltd_display,
+            str(ltd),
             instrument.intraday_trade_candle.max_price,
             instrument.intraday_trade_candle.min_price,
             instrument.intraday_trade_candle.open_price,
