@@ -27,14 +27,14 @@ and subscribe to its realtime data
         self.websocket: ClientConnection = None
         self.subscribed_instruments: list[Instrument] = subscribed_instruments
 
-    async def listen(self):
+    async def listen(self) -> None:
         """Listens to websocket updates"""
         while True:
             message = await self.websocket.recv()
             self._LOGGER.debug("Client received: %s", message)
             self.process_message(message=message)
 
-    def process_message(self, message: str):
+    def process_message(self, message: str) -> None:
         """Processes a new message received from websocket"""
         message_js = json.loads(message)
         for isin, channels in message_js.items():
@@ -44,7 +44,7 @@ and subscribe to its realtime data
             for channel, data in channels.items():
                 match channel:
                     case "thresholds":
-                        pass
+                        self.__message_thresholds(instrument, data)
                     case "trade":
                         pass
                     case "orderbook":
@@ -53,6 +53,11 @@ and subscribe to its realtime data
                         pass
                     case _:
                         self._LOGGER.fatal("Unknown message channel: %s", channel)
+
+    def __message_thresholds(self, instrument: Instrument, data: list) -> None:
+        """Handles a threshold update message"""
+        instrument.order_limitations.max_price = int(data[0])
+        instrument.order_limitations.min_price = int(data[1])
 
     async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
