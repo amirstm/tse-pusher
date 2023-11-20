@@ -52,7 +52,7 @@ class MarketRealtimeData:
 
     def update_instrument_client_type(
         self, instrument_ct: ClientType, mwi_ct: ClientType
-    ):
+    ) -> None:
         """Update an instrument's client type data"""
         instrument_ct.legal.buy.num = mwi_ct.legal.buy.num
         instrument_ct.legal.buy.volume = mwi_ct.legal.buy.volume
@@ -116,7 +116,7 @@ class MarketRealtimeData:
 
     def update_instrument_orderbook_row(
         self, instrument_obr: OrderBookRow, mwi_obr: OrderBookRow
-    ):
+    ) -> None:
         """Update a single row in instrument's order book"""
         instrument_obr.demand.num = mwi_obr.demand.num
         instrument_obr.demand.volume = mwi_obr.demand.volume

@@ -284,7 +284,7 @@ class TsetmcWebsocket:
                     )
 
     @classmethod
-    async def broadcast(cls, clients: list[ClientConnection], message: str):
+    async def broadcast(cls, clients: list[ClientConnection], message: str) -> None:
         """Broadcast a message to a bunch of users"""
         group = asyncio.gather(*[client.send(message) for client in clients])
         await asyncio.wait_for(group, timeout=None)
@@ -399,7 +399,7 @@ class TsetmcWebsocket:
         }
         return return_values[action][channel]
 
-    async def serve_websocket(self):
+    async def serve_websocket(self) -> None:
         """Serves the websocket for the project"""
         self._LOGGER.info("Serving has started.")
         async with serve(

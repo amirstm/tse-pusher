@@ -32,7 +32,7 @@ and subscribe to its realtime data
             message = await self.websocket.recv()
             self._LOGGER.debug("Client received: %s", message)
 
-    async def subscribe(self):
+    async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
         self._LOGGER.info(
             "Client is subscribing to data for %d instruments.",
@@ -41,7 +41,7 @@ and subscribe to its realtime data
         isins = ",".join([x.identification.isin for x in self.subscribed_instruments])
         await self.websocket.send(f"1.all.{isins}")
 
-    async def operate(self):
+    async def operate(self) -> None:
         """Start connecting to the websocket and listening for updates"""
         self._LOGGER.info("Client is starting its operation.")
         async with client.connect(
