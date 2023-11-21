@@ -111,22 +111,32 @@ and subscribe to its realtime data
         await self.websocket.send(f"1.all.{isins}")
 
     async def start_operation(self) -> None:
-        """Start connecting to the websocket and listening for updates"""
-        self._LOGGER.info("Client is starting its operation.")
+        """Start connecting to the websocket and listening for updates for a single loop"""
+        self._LOGGER.info("Client is starting its single-try operation.")
+        self.operation_flag = True
+        await self.__operation_single_try()
+
+    async def infinite_operation(self) -> None:
+        """Start connecting to the websocket and listening for updates in an infinite loop"""
+        self._LOGGER.info("Client is starting its infinite operation.")
         self.operation_flag = True
         while self.operation_flag:
             try:
-                self._LOGGER.info("Client is connecting.")
-                async with client.connect(
-                    f"ws://{self.websocket_host}:{self.websocket_port}"
-                ) as self.websocket:
-                    self._LOGGER.info("Client is connected.")
-                    await self.subscribe()
-                    await self.listen()
+                await self.__operation_single_try()
             except (OSError, ConnectionClosedError) as exc:
                 print(type(Exception))
                 self._LOGGER.error("Connection error: %s", repr(exc))
                 await asyncio.sleep(self._OPERATION_RECONNECT_WAIT)
+
+    async def __operation_single_try(self):
+        """Does a single try on connecting to server"""
+        self._LOGGER.info("Client is connecting.")
+        async with client.connect(
+            f"ws://{self.websocket_host}:{self.websocket_port}"
+        ) as self.websocket:
+            self._LOGGER.info("Client is connected.")
+            await self.subscribe()
+            await self.listen()
 
     def stop_operation(self) -> None:
         """Stops the infinite loop for operations"""
