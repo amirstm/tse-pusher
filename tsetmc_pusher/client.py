@@ -6,6 +6,7 @@ import logging
 import asyncio
 from datetime import datetime
 from websockets import client
+from websockets.exceptions import ConnectionClosedError
 from websockets.sync.client import ClientConnection
 from tse_utils.models.instrument import Instrument
 
@@ -113,7 +114,7 @@ and subscribe to its realtime data
         """Start connecting to the websocket and listening for updates"""
         self._LOGGER.info("Client is starting its operation.")
         self.operation_flag = True
-        while True:
+        while self.operation_flag:
             try:
                 self._LOGGER.info("Client is connecting.")
                 async with client.connect(
@@ -122,6 +123,7 @@ and subscribe to its realtime data
                     self._LOGGER.info("Client is connected.")
                     await self.subscribe()
                     await self.listen()
-            except Exception as exc:
+            except (OSError, ConnectionClosedError) as exc:
+                print(type(Exception))
                 self._LOGGER.error("Connection error: %s", repr(exc))
                 await asyncio.sleep(self._OPERATION_RECONNECT_WAIT)
