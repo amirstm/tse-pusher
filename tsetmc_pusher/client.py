@@ -3,6 +3,7 @@ This module contains the necessary codes for the TSETMC pusher's client.
 """
 import json
 import logging
+import asyncio
 from datetime import datetime
 from websockets import client
 from websockets.sync.client import ClientConnection
@@ -15,7 +16,8 @@ The class used for connecting to the TSETMC pusher websocket \
 and subscribe to its realtime data
     """
 
-    _LOGGER = logging.getLogger(__name__)
+    _LOGGER: logging.Logger = logging.getLogger(__name__)
+    _OPERATION_RECONNECT_WAIT: int = 5
 
     def __init__(
         self,
@@ -27,6 +29,7 @@ and subscribe to its realtime data
         self.websocket_port: int = websocket_port
         self.websocket: ClientConnection = None
         self.subscribed_instruments: list[Instrument] = subscribed_instruments
+        self.operation_flag: bool = False
 
     async def listen(self) -> None:
         """Listens to websocket updates"""
@@ -106,11 +109,19 @@ and subscribe to its realtime data
         isins = ",".join([x.identification.isin for x in self.subscribed_instruments])
         await self.websocket.send(f"1.all.{isins}")
 
-    async def operate(self) -> None:
+    async def start_operation(self) -> None:
         """Start connecting to the websocket and listening for updates"""
         self._LOGGER.info("Client is starting its operation.")
-        async with client.connect(
-            f"ws://{self.websocket_host}:{self.websocket_port}"
-        ) as self.websocket:
-            await self.subscribe()
-            await self.listen()
+        self.operation_flag = True
+        while True:
+            try:
+                self._LOGGER.info("Client is connecting.")
+                async with client.connect(
+                    f"ws://{self.websocket_host}:{self.websocket_port}"
+                ) as self.websocket:
+                    self._LOGGER.info("Client is connected.")
+                    await self.subscribe()
+                    await self.listen()
+            except Exception as exc:
+                self._LOGGER.error("Connection error: %s", repr(exc))
+                await asyncio.sleep(self._OPERATION_RECONNECT_WAIT)

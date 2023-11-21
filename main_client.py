@@ -59,7 +59,7 @@ async def main(*args):
         websocket_port=WEBSOCKET_PORT,
         subscribed_instruments=instruments,
     )
-    await client.operate()
+    await client.start_operation()
 
 
 if __name__ == "__main__":
