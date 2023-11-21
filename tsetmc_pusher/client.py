@@ -34,7 +34,7 @@ and subscribe to its realtime data
 
     async def listen(self) -> None:
         """Listens to websocket updates"""
-        while True:
+        while self.operation_flag:
             message = await self.websocket.recv()
             self._LOGGER.debug("Client received: %s", message)
             self.process_message(message=message)
@@ -127,3 +127,7 @@ and subscribe to its realtime data
                 print(type(Exception))
                 self._LOGGER.error("Connection error: %s", repr(exc))
                 await asyncio.sleep(self._OPERATION_RECONNECT_WAIT)
+
+    def stop_operation(self) -> None:
+        """Stops the infinite loop for operations"""
+        self.operation_flag = False
