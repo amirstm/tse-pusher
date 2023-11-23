@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="tsetmc_pusher",
-    version="1.0.4",
+    version="1.0.5",
     author="Arka Equities & Securities",
     author_email="zare@arkaequities.com",
     description="Pusher for Tehran Stock Exchange data crawled from TSETMC website.",
@@ -15,7 +15,7 @@ as they like. Afterwards, each time data for the subscribed instruments is updat
 changes will be pushed to the clients.
 """,
     packages=setuptools.find_packages(),
-    install_requires=["httpx", "websockets", "tse-utils"],
+    install_requires=["httpx", "websockets", "python-dotenv", "tse-utils"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux",
