@@ -399,7 +399,9 @@ class TsetmcWebsocket:
 
     async def serve_websocket(self) -> None:
         """Serves the websocket for the project"""
-        self._LOGGER.info("Serving has started.")
+        self._LOGGER.info(
+            "Serving has started on [%s:%d].", self.websocket_host, self.websocket_port
+        )
         async with serve(
             self.handle_connection, self.websocket_host, self.websocket_port
         ):
