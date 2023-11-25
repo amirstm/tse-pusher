@@ -9,7 +9,7 @@ from tsetmc_pusher.server.operation import TsetmcOperator
 load_dotenv()
 
 WEBSOCKET_HOST = os.getenv("WEBSOCKET_HOST")
-WEBSOCKET_PORT = os.getenv("WEBSOCKET_PORT")
+WEBSOCKET_PORT = int(os.getenv("WEBSOCKET_PORT"))
 
 
 async def main():
