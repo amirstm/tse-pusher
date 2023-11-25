@@ -60,9 +60,9 @@ jobs:
       - name: Docker build
         uses: docker/build-push-action@v4
         with:
-          file: ./tse-repo-operations/Dockerfile
-          context : ./tse-repo-operations
+          file: ./Dockerfile
+          context : .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: amirstm/tse-repo-operations
+          tags: amirstm/tsetmc-pusher
           cache-from: type=gha
           cache-to: type=gha,mode=max
