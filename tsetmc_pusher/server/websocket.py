@@ -205,6 +205,7 @@ class TsetmcWebsocket:
         self.websocket_port: int = websocket_port
         self.__channels: list[InstrumentChannel] = []
         self.__channels_lock = Lock()
+        self.__global_channel: InstrumentChannel = InstrumentChannel(isin="*")
         self.set_market_realtime_data_pushers()
 
     def set_market_realtime_data_pushers(self) -> None:
@@ -328,7 +329,8 @@ class TsetmcWebsocket:
         if message_parts[1] not in acceptable_channels:
             self._LOGGER.error("Channel [%s] is not acceptable.", message_parts[1])
             return None
-        if message_parts[2] == "*":
+        global_subscription_requested = message_parts[2] == "*"
+        if global_subscription_requested:
             instruments = self.market_realtime_data.get_all_instruments()
             isins = [x.identification.isin for x in instruments]
         else:
@@ -346,15 +348,21 @@ class TsetmcWebsocket:
         )
         initial_data = {}
         with self.__channels_lock:
-            for counter, isin in enumerate(isins):
-                channel = next((x for x in self.__channels if x.isin == isin), None)
-                if not channel:
-                    channel = InstrumentChannel(isin)
-                    self.__channels.append(channel)
-                    self._LOGGER.info("New channel for [%s]", isin)
-                channel_action_func(client, channel)
-                if instruments[counter]:
-                    initial_data[isin] = initial_data_func(instruments[counter])
+            if global_subscription_requested:
+                channel_action_func(client, self.__global_channel)
+                for instrument in instruments:
+                    if instrument:
+                        initial_data[isin] = initial_data_func(instruments[counter])
+            else:
+                for counter, isin in enumerate(isins):
+                    channel = next((x for x in self.__channels if x.isin == isin), None)
+                    if not channel:
+                        channel = InstrumentChannel(isin)
+                        self.__channels.append(channel)
+                        self._LOGGER.info("New channel for [%s]", isin)
+                    channel_action_func(client, channel)
+                    if instruments[counter]:
+                        initial_data[isin] = initial_data_func(instruments[counter])
         return initial_data
 
     def get_channel_action_func(

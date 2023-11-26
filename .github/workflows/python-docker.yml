@@ -39,12 +39,6 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
         skip-existing: true
 
-  # docker-image-build:
-
-  #   name: Build Docker Image
-  #   runs-on: ubuntu-latest
-  #   steps:
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
