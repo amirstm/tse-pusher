@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir tsetmc-pusher
 COPY main_server.py .
 
-ENV WEBSOCKET_HOST localhost
+ENV WEBSOCKET_HOST 0.0.0.0
 ENV WEBSOCKET_PORT 8765 
 
 EXPOSE $websocket_port

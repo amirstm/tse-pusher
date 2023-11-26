@@ -92,6 +92,8 @@ and subscribe to its realtime data
 
     def __message_clienttype(self, instrument: Instrument, data: list) -> None:
         """Handles an orderbook update message"""
+        if data[0] is None:
+            return
         instrument.client_type.legal.buy.num = int(data[0])
         instrument.client_type.legal.buy.volume = int(data[1])
         instrument.client_type.legal.sell.num = int(data[2])
