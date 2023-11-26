@@ -352,7 +352,9 @@ class TsetmcWebsocket:
                 channel_action_func(client, self.__global_channel)
                 for instrument in instruments:
                     if instrument:
-                        initial_data[isin] = initial_data_func(instruments[counter])
+                        initial_data[
+                            instrument.identification.isin
+                        ] = initial_data_func(instrument)
             else:
                 for counter, isin in enumerate(isins):
                     channel = next((x for x in self.__channels if x.isin == isin), None)
