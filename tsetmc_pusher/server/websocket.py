@@ -228,14 +228,23 @@ class TsetmcWebsocket:
                     ),
                     None,
                 )
-                if channel and channel.trade_subscribers:
+                endpoints = self.__global_channel.trade_subscribers
+                if channel:
+                    endpoints = endpoints.union(channel.trade_subscribers)
+                if endpoints:
                     await self.broadcast(
-                        channel.trade_subscribers,
-                        json.dumps({channel.isin: instrument_data_trade(instrument)}),
+                        endpoints,
+                        json.dumps(
+                            {
+                                instrument.identification.isin: instrument_data_trade(
+                                    instrument
+                                )
+                            }
+                        ),
                     )
 
     async def pusher_orderbook_data(
-        self, instruments: list[Instrument]
+        self, instruments: list[tuple[Instrument, list[int]]]
     ) -> Callable[[list[tuple[Instrument, list[int]]]], Awaitable[None]]:
         """Returns the pusher_orderbook_data to override in repo"""
         for instrument, rows in instruments:
@@ -248,12 +257,15 @@ class TsetmcWebsocket:
                     ),
                     None,
                 )
-                if channel and channel.orderbook_subscribers:
+                endpoints = self.__global_channel.orderbook_subscribers
+                if channel:
+                    endpoints = endpoints.union(channel.orderbook_subscribers)
+                if endpoints:
                     await self.broadcast(
-                        channel.orderbook_subscribers,
+                        endpoints,
                         json.dumps(
                             {
-                                channel.isin: instrument_data_orderbook_specific_rows(
+                                instrument.identification.isin: instrument_data_orderbook_specific_rows(
                                     instrument, rows
                                 )
                             }
@@ -274,11 +286,18 @@ class TsetmcWebsocket:
                     ),
                     None,
                 )
-                if channel and channel.clienttype_subscribers:
+                endpoints = self.__global_channel.clienttype_subscribers
+                if channel:
+                    endpoints = endpoints.union(channel.clienttype_subscribers)
+                if endpoints:
                     await self.broadcast(
-                        channel.clienttype_subscribers,
+                        endpoints,
                         json.dumps(
-                            {channel.isin: instrument_data_clienttype(instrument)}
+                            {
+                                instrument.identification.isin: instrument_data_clienttype(
+                                    instrument
+                                )
+                            }
                         ),
                     )
 

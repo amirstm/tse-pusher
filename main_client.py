@@ -34,19 +34,24 @@ async def main():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
-    instruments = [
-        Instrument(identification=x)
-        for x in [
-            InstrumentIdentification(isin="IRO1FOLD0001"),
-            # InstrumentIdentification(isin="IRO1MSMI0001"),
-            # InstrumentIdentification(isin="IRO1IKCO0001"),
+    global_subscription = True
+    instruments = (
+        None
+        if global_subscription
+        else [
+            Instrument(identification=x)
+            for x in [
+                InstrumentIdentification(isin="IRO1FOLD0001"),
+                # InstrumentIdentification(isin="IRO1MSMI0001"),
+                # InstrumentIdentification(isin="IRO1IKCO0001"),
+            ]
         ]
-    ]
+    )
     client = TsetmcClient(
         websocket_host=WEBSOCKET_HOST,
         websocket_port=WEBSOCKET_PORT,
         subscribed_instruments=instruments,
-        global_subscriber=True,
+        global_subscriber=global_subscription,
     )
     await client.infinite_operation()
 
