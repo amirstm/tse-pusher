@@ -114,9 +114,7 @@ def instrument_data_trade(instrument: Instrument) -> list:
     }
 
 
-def instrument_data_orderbook_specific_rows(
-    instrument: Instrument, rows: list[int]
-) -> list:
+def instrument_data_orderbook_rows(instrument: Instrument, rows: list[int]) -> list:
     """Convert instrument's orderbook data for websocket transfer"""
     return {
         "orderbook": [
@@ -265,7 +263,7 @@ class TsetmcWebsocket:
                         endpoints,
                         json.dumps(
                             {
-                                instrument.identification.isin: instrument_data_orderbook_specific_rows(
+                                instrument.identification.isin: instrument_data_orderbook_rows(
                                     instrument, rows
                                 )
                             }
@@ -302,9 +300,16 @@ class TsetmcWebsocket:
                     )
 
     @classmethod
+    async def try_send(cls, client: ClientConnection, message: str) -> None:
+        try:
+            await client.send(message)
+        except ConnectionClosedOK:
+            pass
+
+    @classmethod
     async def broadcast(cls, clients: list[ClientConnection], message: str) -> None:
         """Broadcast a message to a bunch of users"""
-        group = asyncio.gather(*[client.send(message) for client in clients])
+        group = asyncio.gather(*[cls.try_send(client, message) for client in clients])
         await asyncio.wait_for(group, timeout=None)
 
     async def handle_connection(self, client: ClientConnection) -> None:
@@ -319,8 +324,9 @@ class TsetmcWebsocket:
                 if response:
                     await client.send(json.dumps(response))
         except (ConnectionClosedError, ConnectionClosedOK):
-            self._LOGGER.info("Connection closed to [%s]", client.id)
+            pass
         finally:
+            self._LOGGER.info("Connection closed to [%s]", client.id)
             self._LOGGER.info("Removing [%s] from all channels", client.id)
             self.remove_from_channels(client)
 
@@ -330,23 +336,29 @@ class TsetmcWebsocket:
             for channel in self.__channels:
                 unsubscribe_all(client, channel)
 
+    def __message_is_invalid(self, message: str, message_parts: list[str]) -> bool:
+        """Checks if client message is valid"""
+        acceptable_actions = ["0", "1"]
+        acceptable_channels = ["all", "trade", "orderbook", "clienttype"]
+        if len(message_parts) != 3:
+            self._LOGGER.error("Message [%s] has unacceptable format.", message)
+            return True
+        if message_parts[0] not in acceptable_actions:
+            self._LOGGER.error("Action [%s] is not acceptable.", message_parts[0])
+            return True
+        if message_parts[1] not in acceptable_channels:
+            self._LOGGER.error("Channel [%s] is not acceptable.", message_parts[1])
+            return True
+        return False
+
     def handle_connection_message(self, client: ClientConnection, message: str) -> dict:
         """
         Handles a single message from client
         Standard message format is: <Action>.<Channel>.<Isin1>,<Isin2>,...
         For instance: 1.trade.IRO1FOLD0001,IRO1IKCO0001
         """
-        acceptable_actions = ["0", "1"]
-        acceptable_channels = ["all", "trade", "orderbook", "clienttype"]
         message_parts = message.split(".")
-        if len(message_parts) != 3:
-            self._LOGGER.error("Message [%s] has unacceptable format.", message)
-            return None
-        if message_parts[0] not in acceptable_actions:
-            self._LOGGER.error("Action [%s] is not acceptable.", message_parts[0])
-            return None
-        if message_parts[1] not in acceptable_channels:
-            self._LOGGER.error("Channel [%s] is not acceptable.", message_parts[1])
+        if self.__message_is_invalid(message, message_parts):
             return None
         global_subscription_requested = message_parts[2] == "*"
         if global_subscription_requested:
