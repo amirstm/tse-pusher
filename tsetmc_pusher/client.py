@@ -4,11 +4,12 @@ This module contains the necessary codes for the TSETMC pusher's client.
 import json
 import logging
 import asyncio
+from threading import Lock
 from datetime import datetime
 from websockets import client
 from websockets.exceptions import ConnectionClosedError
 from websockets.sync.client import ClientConnection
-from tse_utils.models.instrument import Instrument
+from tse_utils.models.instrument import Instrument, InstrumentIdentification
 
 
 class TsetmcClient:
@@ -24,13 +25,18 @@ and subscribe to its realtime data
         self,
         websocket_host: str,
         websocket_port: int,
-        subscribed_instruments: list[Instrument],
+        subscribed_instruments: list[Instrument] = None,
+        global_subscriber: bool = False,
     ):
         self.websocket_host: str = websocket_host
         self.websocket_port: int = websocket_port
         self.websocket: ClientConnection = None
-        self.subscribed_instruments: list[Instrument] = subscribed_instruments
+        self.__subscribed_instruments: list[Instrument] = (
+            subscribed_instruments if subscribed_instruments else []
+        )
+        self.__subscribed_instruments_lock: Lock = Lock()
         self.operation_flag: bool = False
+        self.global_subscriber: bool = global_subscriber
 
     async def listen(self) -> None:
         """Listens to websocket updates"""
@@ -43,9 +49,7 @@ and subscribe to its realtime data
         """Processes a new message received from websocket"""
         message_js = json.loads(message)
         for isin, channels in message_js.items():
-            instrument = next(
-                x for x in self.subscribed_instruments if x.identification.isin == isin
-            )
+            instrument = self.get_subscribed_instrument(isin)
             for channel, data in channels.items():
                 match channel:
                     case "thresholds":
@@ -58,6 +62,22 @@ and subscribe to its realtime data
                         self.__message_clienttype(instrument, data)
                     case _:
                         self._LOGGER.fatal("Unknown message channel: %s", channel)
+
+    def get_subscribed_instrument(self, isin) -> Instrument:
+        """Gets the subscribed instrument by Isin"""
+        with self.__subscribed_instruments_lock:
+            instrument = next(
+                (
+                    x
+                    for x in self.__subscribed_instruments
+                    if x.identification.isin == isin
+                ),
+                None,
+            )
+            if instrument is None:
+                instrument = Instrument(InstrumentIdentification(isin=isin))
+                self.__subscribed_instruments.append(instrument)
+        return instrument
 
     def __message_thresholds(self, instrument: Instrument, data: list) -> None:
         """Handles a threshold update message"""
@@ -105,11 +125,18 @@ and subscribe to its realtime data
 
     async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
-        self._LOGGER.info(
-            "Client is subscribing to data for %d instruments.",
-            len(self.subscribed_instruments),
-        )
-        isins = ",".join([x.identification.isin for x in self.subscribed_instruments])
+        if self.global_subscriber:
+            self._LOGGER.info("Client is subscribing to data for all instruments.")
+            isins = "*"
+        else:
+            with self.__subscribed_instruments_lock:
+                self._LOGGER.info(
+                    "Client is subscribing to data for %d instruments.",
+                    len(self.__subscribed_instruments),
+                )
+                isins = ",".join(
+                    [x.identification.isin for x in self.__subscribed_instruments]
+                )
         await self.websocket.send(f"1.all.{isins}")
 
     async def start_operation(self) -> None:
@@ -126,7 +153,6 @@ and subscribe to its realtime data
             try:
                 await self.__operation_single_try()
             except (OSError, ConnectionClosedError) as exc:
-                print(type(Exception))
                 self._LOGGER.error("Connection error: %s", repr(exc))
                 await asyncio.sleep(self._OPERATION_RECONNECT_WAIT)
 

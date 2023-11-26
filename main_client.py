@@ -46,6 +46,7 @@ async def main():
         websocket_host=WEBSOCKET_HOST,
         websocket_port=WEBSOCKET_PORT,
         subscribed_instruments=instruments,
+        global_subscriber=True,
     )
     await client.infinite_operation()
 

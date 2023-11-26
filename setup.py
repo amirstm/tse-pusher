@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="tsetmc_pusher",
-    version="1.0.9",
+    version="1.1.0",
     author="Arka Equities & Securities",
     author_email="zare@arkaequities.com",
     description="Pusher for Tehran Stock Exchange data crawled from TSETMC website.",
