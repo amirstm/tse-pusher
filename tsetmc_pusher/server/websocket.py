@@ -301,6 +301,7 @@ class TsetmcWebsocket:
 
     @classmethod
     async def try_send(cls, client: ClientConnection, message: str) -> None:
+        """Tries sending a message to a client"""
         try:
             await client.send(message)
         except ConnectionClosedOK:
