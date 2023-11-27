@@ -10,7 +10,7 @@ from tse_utils import tsetmc
 from tse_utils.tsetmc.models import TsetmcScrapeException
 from tsetmc_pusher.server.repository import MarketRealtimeData
 from tsetmc_pusher.server.websocket import TsetmcWebsocket
-from tsetmc_pusher.server.timing import (
+from tsetmc_pusher.timing import (
     sleep_until,
     MARKET_END_TIME,
     MARKET_START_TIME,
@@ -142,5 +142,6 @@ class TsetmcOperator:
         """Daily tasks for the crawler are called from here"""
         self._LOGGER.info("Daily tasks are starting.")
         await sleep_until(MARKET_START_TIME)
-        self._LOGGER.info("Market is starting.")
+        self._LOGGER.info("Market time is starting.")
         await self.market_time_operations()
+        self._LOGGER.info("Market time has ended.")

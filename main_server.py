@@ -5,6 +5,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
 from tsetmc_pusher.server.operation import TsetmcOperator
+from tsetmc_pusher.timing import sleep_until
 
 load_dotenv()
 
@@ -35,7 +36,8 @@ async def main():
     operator = TsetmcOperator(
         websocket_host=WEBSOCKET_HOST, websocket_port=WEBSOCKET_PORT
     )
-    await operator.perform_daily()
+    while True:
+        await operator.perform_daily()
 
 
 if __name__ == "__main__":
