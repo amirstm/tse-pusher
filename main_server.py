@@ -5,7 +5,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
 from tsetmc_pusher.server.operation import TsetmcOperator
-from tsetmc_pusher.timing import sleep_until
+from tsetmc_pusher.timing import sleep_until_tomorrow
 
 load_dotenv()
 
@@ -38,6 +38,7 @@ async def main():
     )
     while True:
         await operator.perform_daily()
+        await sleep_until_tomorrow()
 
 
 if __name__ == "__main__":
