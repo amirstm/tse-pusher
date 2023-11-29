@@ -22,7 +22,7 @@ async def sleep_until(wakeup_at: time) -> None:
 
 
 async def sleep_until_tomorrow() -> None:
-    """Sleep until tomorrow"""
+    """Sleep until tomorrow on morning startup time"""
     time_delta = (
         datetime.combine(datetime.today(), MORNING_STARTUP_TIME)
         + timedelta(days=1)
