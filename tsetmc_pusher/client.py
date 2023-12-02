@@ -16,10 +16,10 @@ from enum import Enum
 class SubscriptionType(Enum):
     """Client subsctiption type identifier"""
 
-    ALL = "All"
-    TRADE = "Trade"
-    ORDERBOOK = "Orderbook"
-    CLIENTTYPE = "Clienttype"
+    ALL = "all"
+    TRADE = "trade"
+    ORDERBOOK = "orderbook"
+    CLIENTTYPE = "clienttype"
 
 
 class TsetmcClient:
@@ -37,21 +37,23 @@ and subscribe to its realtime data
         websocket_port: int,
         subscribed_instruments: list[Instrument] = None,
         global_subscriber: bool = False,
+        subscription_type: SubscriptionType = SubscriptionType.ALL,
     ):
         self.websocket_host: str = websocket_host
         self.websocket_port: int = websocket_port
-        self.websocket: ClientConnection = None
+        self.__websocket: ClientConnection = None
         self.__subscribed_instruments: list[Instrument] = (
             subscribed_instruments if subscribed_instruments else []
         )
         self.__subscribed_instruments_lock: Lock = Lock()
+        self.subscription_type: SubscriptionType = subscription_type
         self.operation_flag: bool = False
         self.global_subscriber: bool = global_subscriber
 
     async def listen(self) -> None:
         """Listens to websocket updates"""
         while self.operation_flag:
-            message = await self.websocket.recv()
+            message = await self.__websocket.recv()
             self._LOGGER.debug("Client received: %s", message)
             self.process_message(message=message)
 
@@ -147,7 +149,7 @@ and subscribe to its realtime data
                 isins = ",".join(
                     [x.identification.isin for x in self.__subscribed_instruments]
                 )
-        await self.websocket.send(f"1.all.{isins}")
+        await self.__websocket.send(f"1.all.{isins}")
 
     async def start_operation(self) -> None:
         """Start connecting to the websocket and listening for updates for a single loop"""
@@ -171,7 +173,7 @@ and subscribe to its realtime data
         self._LOGGER.info("Client is connecting.")
         async with client.connect(
             f"ws://{self.websocket_host}:{self.websocket_port}"
-        ) as self.websocket:
+        ) as self.__websocket:
             self._LOGGER.info("Client is connected.")
             await self.subscribe()
             await self.listen()
