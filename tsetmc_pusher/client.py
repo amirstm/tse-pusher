@@ -6,11 +6,12 @@ import logging
 import asyncio
 from threading import Lock
 from datetime import datetime
+from enum import Enum
+from dataclasses import dataclass
 from websockets import client
 from websockets.exceptions import ConnectionClosedError
 from websockets.sync.client import ClientConnection
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
-from enum import Enum
 
 
 class SubscriptionType(Enum):
@@ -20,6 +21,29 @@ class SubscriptionType(Enum):
     TRADE = "trade"
     ORDERBOOK = "orderbook"
     CLIENTTYPE = "clienttype"
+
+
+@dataclass
+class TsetmcClientSubscription:
+    """Identifies the details of a client's subscription"""
+
+    subscribed_instruments: list[Instrument] = None
+    subscribed_instruments_lock: Lock = None
+    global_subscriber: bool = False
+    subscription_type: SubscriptionType = SubscriptionType.ALL
+
+    def __init__(
+        self,
+        subscribed_instruments: list[Instrument] = None,
+        global_subscriber: bool = False,
+        subscription_type: SubscriptionType = SubscriptionType.ALL,
+    ):
+        self.subscribed_instruments: list[Instrument] = (
+            subscribed_instruments if subscribed_instruments else []
+        )
+        self.subscribed_instruments_lock: Lock = Lock()
+        self.subscription_type: SubscriptionType = subscription_type
+        self.global_subscriber: bool = global_subscriber
 
 
 class TsetmcClient:
@@ -35,20 +59,13 @@ and subscribe to its realtime data
         self,
         websocket_host: str,
         websocket_port: int,
-        subscribed_instruments: list[Instrument] = None,
-        global_subscriber: bool = False,
-        subscription_type: SubscriptionType = SubscriptionType.ALL,
+        subscription: TsetmcClientSubscription,
     ):
         self.websocket_host: str = websocket_host
         self.websocket_port: int = websocket_port
         self.__websocket: ClientConnection = None
-        self.__subscribed_instruments: list[Instrument] = (
-            subscribed_instruments if subscribed_instruments else []
-        )
-        self.__subscribed_instruments_lock: Lock = Lock()
-        self.subscription_type: SubscriptionType = subscription_type
         self.operation_flag: bool = False
-        self.global_subscriber: bool = global_subscriber
+        self.subscription: TsetmcClientSubscription = subscription
 
     async def listen(self) -> None:
         """Listens to websocket updates"""
@@ -77,18 +94,18 @@ and subscribe to its realtime data
 
     def get_subscribed_instrument(self, isin) -> Instrument:
         """Gets the subscribed instrument by Isin"""
-        with self.__subscribed_instruments_lock:
+        with self.subscription.subscribed_instruments_lock:
             instrument = next(
                 (
                     x
-                    for x in self.__subscribed_instruments
+                    for x in self.subscription.subscribed_instruments
                     if x.identification.isin == isin
                 ),
                 None,
             )
             if instrument is None:
                 instrument = Instrument(InstrumentIdentification(isin=isin))
-                self.__subscribed_instruments.append(instrument)
+                self.subscription.subscribed_instruments.append(instrument)
         return instrument
 
     def __message_thresholds(self, instrument: Instrument, data: list) -> None:
@@ -137,19 +154,24 @@ and subscribe to its realtime data
 
     async def subscribe(self) -> None:
         """Subscribe to the channels for the appointed instruemtns"""
-        if self.global_subscriber:
+        if self.subscription.global_subscriber:
             self._LOGGER.info("Client is subscribing to data for all instruments.")
             isins = "*"
         else:
-            with self.__subscribed_instruments_lock:
+            with self.subscription.subscribed_instruments_lock:
                 self._LOGGER.info(
                     "Client is subscribing to data for %d instruments.",
-                    len(self.__subscribed_instruments),
+                    len(self.subscription.subscribed_instruments),
                 )
                 isins = ",".join(
-                    [x.identification.isin for x in self.__subscribed_instruments]
+                    [
+                        x.identification.isin
+                        for x in self.subscription.subscribed_instruments
+                    ]
                 )
-        await self.__websocket.send(f"1.{self.subscription_type.value}.{isins}")
+        await self.__websocket.send(
+            f"1.{self.subscription.subscription_type.value}.{isins}"
+        )
 
     async def start_operation(self) -> None:
         """Start connecting to the websocket and listening for updates for a single loop"""
