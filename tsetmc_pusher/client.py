@@ -10,6 +10,16 @@ from websockets import client
 from websockets.exceptions import ConnectionClosedError
 from websockets.sync.client import ClientConnection
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
+from enum import Enum
+
+
+class SubscriptionType(Enum):
+    """Client subsctiption type identifier"""
+
+    ALL = "All"
+    TRADE = "Trade"
+    ORDERBOOK = "Orderbook"
+    CLIENTTYPE = "Clienttype"
 
 
 class TsetmcClient:
