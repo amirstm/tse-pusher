@@ -6,7 +6,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
 from tse_utils.models.instrument import Instrument, InstrumentIdentification
-from tsetmc_pusher.client import TsetmcClient
+from tsetmc_pusher.client import TsetmcClient, TsetmcClientSubscription
 
 load_dotenv()
 
@@ -34,14 +34,15 @@ async def main():
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
-    global_subscription = True
+    global_subscription = False
     instruments = (
         None
         if global_subscription
         else [
             Instrument(identification=x)
             for x in [
-                InstrumentIdentification(isin="IRO1FOLD0001"),
+                InstrumentIdentification(isin="IRO1FOLD0001", ticker="فولاد"),
+                InstrumentIdentification(isin="IRB3TR090491", ticker="اخزا104"),
                 # InstrumentIdentification(isin="IRO1MSMI0001"),
                 # InstrumentIdentification(isin="IRO1IKCO0001"),
             ]
@@ -50,8 +51,10 @@ async def main():
     client = TsetmcClient(
         websocket_host=WEBSOCKET_HOST,
         websocket_port=WEBSOCKET_PORT,
-        subscribed_instruments=instruments,
-        global_subscriber=global_subscription,
+        subscription=TsetmcClientSubscription(
+            subscribed_instruments=instruments,
+            global_subscriber=global_subscription,
+        ),
     )
     await client.infinite_operation()
 
